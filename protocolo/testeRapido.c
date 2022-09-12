@@ -75,7 +75,7 @@ int main()
         case C_I_GET:
             tk = strtok_r(resto, TK, &resto);          // elimina a primeira parte
             valor = atoi(strtok_r(resto, TK, &resto)); // captura o valor
-            printf("Mensagem %s\tValor",mensagem);
+            printf("Mensagem %s\tValor", mensagem);
             break;
         case C_I_START:
 // DO STUFF

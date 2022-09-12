@@ -16,17 +16,148 @@
 #define BUFFER_SIZE 1024
 
 char INPUT[24] = "";
-char OUTPUT[24]= "";
-int LASTCMD =50;
+char OUTPUT[24] = "";
+int LASTCMD = 50;
 char SAIR = '0';
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
-char DATATOSEND = 0;
+int DATATOSEND = 0;
 
 typedef struct S_ServerData
 {
     /* data */
     in_port_t porta;
 } ServerData;
+
+void execComando(int r, char *memcpy);
+void *threadServerUDP(void *arg);
+void error(char *msg);
+
+int main(int argc, char *argv[])
+{
+    // lembrando que: argc = total de argumentos da chamada
+    //               *argv = argumentos recebidos (OBS: 0 = chamada do program, 1 - n o resto)
+    // Argumentos recebibos sempre em array de char (string)
+    // Só preciso passar a porta no servidor
+    int iServer;
+    int r;
+    char memcpy[24];
+
+    if (argc < 2) // chamada de programa + porta
+    {
+        fprintf(stderr, "ERROR, no port provided\n");
+        exit(0);
+    }
+    ServerData serverData;
+    serverData.porta = htons(atoi(argv[1])); // converte o valor da porta para o formato necessário
+    pthread_t pthServidor;                   // threadServidor
+    pthread_create(&pthServidor, NULL, threadServerUDP, (void *)&serverData);
+    if (iServer)
+    {
+        fprintf(stderr, "Error - pthread_create() return code: %d\n", iServer);
+
+        exit(EXIT_FAILURE);
+    }
+    while (SAIR != 27)
+    {
+        if (kbhit())
+        { // LINUX não tem um kbhit() como o windows -> ver arquivo kbhit.h
+            SAIR = getchar();
+        }
+#ifdef DEBUG
+        printf("Última Mensagem recebida %s\n", INPUT);
+        sleep(2);
+#endif
+        r = LASTCMD;
+        strcpy(memcpy, INPUT);
+        printf("%s", INPUT);
+        execComando(r, memcpy);
+    }
+    pthread_join(pthServidor, NULL);
+    exit(EXIT_SUCCESS);
+}
+
+void execComando(int r, char *memcpy)
+{
+    char *tk = NULL;
+    char *resto = memcpy;
+    int numSeq, valor;
+    char sSeq[4];
+    char sValor[4];
+    char aux[24] = "";
+    if (r < 10) // comandos de saída AZUIS NO PDF
+    {
+        switch (r)
+        {
+        case C_O_CLOSE:
+            // TODO fazer tratamento de erro para o número de sequencia e valor
+            tk = strtok_r(resto, TK, &resto);            // elimina a primeira parte
+            strcpy(sSeq, strtok_r(resto, TK, &resto));   // captura o número de sequencia
+            strcpy(sValor, strtok_r(resto, TK, &resto)); // captura o valor
+            strcat(aux, I_CLOSE);
+            strcat(aux, TK);
+            strcat(aux, sSeq);
+            strcat(aux, ENDMSG);
+            numSeq = atoi(sSeq);
+            valor = atoi(sValor);
+            strcpy(OUTPUT, aux);
+            DATATOSEND = 1;
+            break;
+        case C_O_OPEN:
+            // TODO fazer tratamento de erro para o número de sequencia e valor
+            strcat(aux, I_OPEN);
+            strcat(aux, TK);
+            tk = strtok_r(resto, TK, &resto);          // elimina a primeira parte
+            strcpy(sSeq, strtok_r(resto, TK, &resto)); // captura o número de sequencia
+            printf("%s", sSeq);
+            strcat(aux, sSeq);
+            strcpy(sValor, strtok_r(resto, TK, &resto)); // captura o valor
+            strcat(aux, ENDMSG);
+            numSeq = atoi(sSeq);
+            valor = atoi(sValor);
+            strcpy(OUTPUT, aux);
+            DATATOSEND = 1;
+            break;
+#ifdef DEBUG
+            printf("%s \tNumSeq %d, valor %d\n", tk, numSeq, valor);
+#endif
+            break;
+        case C_O_SET:
+            tk = strtok_r(resto, TK, &resto);          // elimina a primeira parte
+            valor = atoi(strtok_r(resto, TK, &resto)); // captura o valor
+#ifdef DEBUG
+            printf("%s \tvalor %d\n", tk, valor);
+#endif
+            break;
+        case C_O_GET:
+// DO STUFF
+#ifdef DEBUG
+            printf("%s \n", INPUT);
+#endif
+            break;
+        case C_O_START:
+// DO STUFF
+#ifdef DEBUG
+            printf("%s \n", INPUT);
+#endif
+            break;
+        case C_O_COM:
+// DO STUFF
+#ifdef DEBUG
+            printf("%s \n", INPUT);
+#endif
+            break;
+        case C_I_ERRO:
+            strcat(aux, I_ERRO);
+            strcat(aux, ENDMSG);
+            strcpy(OUTPUT, aux);
+            DATATOSEND = 1;
+            break;
+        default:
+            break;
+        }
+    }
+    return;
+}
 
 void error(char *msg) // método para imprimir um erro, só passar uma mensagem
 {
@@ -83,11 +214,11 @@ void *threadServerUDP(void *arg)
             strcpy(INPUT, buffer);
             // strcpy(mensagem, buffer);
             // int r = analisarComando(buffer); // aqui já sei o que tenho que fazer
-            int r = analisarComando(buffer);
-            LASTCMD = r != -1 ? r : LASTCMD; // se for invalida a mensagem mantem o último comando
-            #ifdef DEBUG
-                printf("%d",LASTCMD);
-            #endif
+            LASTCMD = analisarComando(buffer, 1); // 1 pois é o servidor
+                                                  // = resp != -1 ? resp : LASTCMD; // se for invalida a mensagem mantem o último comando
+#ifdef DEBUG
+            printf("%d", LASTCMD);
+#endif
             // passar isso por um switch ? escrever isso como retorno para a main?
             // colocar minha mensagem em algum lugar ?? area da main ?
             // Servidor é uma thread -> preciso passar uma serie de elementos para ele
@@ -101,11 +232,16 @@ void *threadServerUDP(void *arg)
         }
         if (DATATOSEND)
         {
+            bzero(buffer, BUFFER_SIZE);
             strcpy(buffer, OUTPUT);
             n = sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&from, fromlen);
             if (n < 0)
             {
                 error("Envio");
+            }
+            else
+            {
+                DATATOSEND = 0;
             }
         }
         pthread_mutex_unlock(&mutexCOM);
@@ -113,54 +249,6 @@ void *threadServerUDP(void *arg)
     if (SAIR == 27)
     {
         printf("Encerrando SERVIDOR, ESQ pressionado\n");
-        close(sock);
     }
     return NULL;
-}
-
-int main(int argc, char *argv[])
-{
-    // lembrando que: argc = total de argumentos da chamada
-    //               *argv = argumentos recebidos (OBS: 0 = chamada do program, 1 - n o resto)
-    // Argumentos recebibos sempre em array de char (string)
-    // Só preciso passar a porta no servidor
-    int iServer;
-    int r;
-    char memcpy[24];
-    char *tk = NULL;
-    char *resto = memcpy;
-    int numSeq, valor;
-    if (argc < 2) // chamada de programa + porta
-    {
-        fprintf(stderr, "ERROR, no port provided\n");
-        exit(0);
-    }
-    ServerData serverData;
-    serverData.porta = htons(atoi(argv[1])); // converte o valor da porta para o formato necessário
-    pthread_t pthServidor;                   // threadServidor
-    pthread_create(&pthServidor, NULL, threadServerUDP, &serverData);
-    if (iServer)
-    {
-        fprintf(stderr, "Error - pthread_create() return code: %d\n", iServer);
-    
-        exit(EXIT_FAILURE);
-    }
-    while (SAIR != 27)
-    {
-        if (kbhit())
-        { // LINUX não tem um kbhit() como o windows -> ver arquivo kbhit.h
-            SAIR = getchar();
-        }
-#ifdef DEBUG
-        printf("Última Mensagem recebida %s\n", INPUT);
-        sleep(2);
-#endif
-        int r = LASTCMD;
-        strcpy(memcpy, INPUT);
-        printf("%s",INPUT);
-        if (r>10){
-            printf("why");
-        }
-    }
-    pthread_join(pthServidor, NULL);
 }
