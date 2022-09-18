@@ -1,4 +1,3 @@
-//para compilar gcc -lm -LSDL grafico.c -o gComp
 #include <stdio.h>
 #include <SDL/SDL.h>
 #include <math.h>
