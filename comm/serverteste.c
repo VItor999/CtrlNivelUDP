@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
   char out = '\0'; // tecla em que irei guardar a saida
   char retorno [11];
   int isserver;
+  TPMENSAGEM mensagem;
   strcpy(retorno,"Comando   ");
   if (argc < 2 && argc!=3)  // chamada de programa + porta
   {
@@ -86,30 +87,21 @@ int main(int argc, char *argv[])
       char *resto = buffer;
       tk = strtok_r(resto, "\n", &resto);
       printf("Received a datagram: %s \n", buffer);
-      char mensagem[strlen(buffer)];
-      strcpy(mensagem, buffer);
-      int r = analisarComando(mensagem,isserver); //aqui já sei o que tenho que fazer
-      // passar isso por um switch ? escrever isso como retorno para a main?
-      // colocar minha mensagem em algum lugar ?? area da main ?
-      // Servidor é uma thread -> preciso passar uma serie de elementos para ele
-      // preciso montar meu struct fora daqui e seguir a vida, passa ele para fazer o bindig na thread ???
-      // Minha váriavel R será "global" e usarei mutex para lock e etc (uma vez) por ciclo eu atualizo ela ??
-      // com base na variavel R sei o que fazer dar uma olhada em teste rapido.c
-      // muitas ideias/ formas de fazer
-      // precisamos definir melhor como vamos abordar o problema
-      // sem isso eu não sei mt bem como prossseguir
-      //snprintf(retorno, strlen(retorno), "%d", r);
-	  if(r==-1){
+      char msg[strlen(buffer)];
+      strcpy(msg, buffer);
+      mensagem = analisarComando(msg,isserver); //aqui já sei o que tenho que fazer
+      printf("MENSAGEM:%s \t COMANDO:%d \tSEQUENCIA :%d \tVALOR :%d\n",buffer,mensagem.comando,mensagem.sequencia,mensagem.valor);
+	  if(mensagem.comando==C_S_ERRO){
 		  retorno[strlen(retorno)-2]='-';
 		  retorno[strlen(retorno)-1]='1';
 		  retorno[strlen(retorno)]='\0';
-	  }else if (r<10){
+	  }else if (mensagem.comando<10){
 		  retorno[strlen(retorno)-2]=' ';
-          retorno[strlen(retorno)-1]=r+48;
+          retorno[strlen(retorno)-1]=mensagem.comando+48;
 		  retorno[strlen(retorno)]='\0';
       }else{
-		  retorno[strlen(retorno)-2]=r/10+48;
-		  retorno[strlen(retorno)-1]=r%10+48;
+		  retorno[strlen(retorno)-2]=mensagem.comando/10+48;
+		  retorno[strlen(retorno)-1]=mensagem.comando%10+48;
 		  retorno[strlen(retorno)]='\0';
 	  }
       n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);

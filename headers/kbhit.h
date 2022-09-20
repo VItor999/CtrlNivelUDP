@@ -1,10 +1,23 @@
-// FONTE https://cboard.cprogramming.com/c-programming/63166-kbhit-linux.html
+/**
+*@file kbhit.h
+*@author Lucas Esteves e Vitor Carvalho 
+*@brief Biblioteca auxiliar definida pra a definição do kbhit no linux
+* Bostejo completo aqui
+*@version 0.1
+*@date 2022-09-18
+*
+**/
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
 #include <fcntl.h>
 
 #ifndef kbhithead
+/**
+ * @brief Implementação do kbhit no UNIX
+ * 
+ * @return int retorna 1 se alguma tecla foi pressionada
+ */
 int kbhit(void)
 {
   struct termios oldt, newt;
