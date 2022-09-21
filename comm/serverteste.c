@@ -1,4 +1,4 @@
-#include "../headers/protocolnovo.h"
+#include "../headers/protocolo.h"
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -27,10 +27,10 @@ int main(int argc, char *argv[])
   struct sockaddr_in from;
   char buffer[BUFFER_SIZE];
   char out = '\0'; // tecla em que irei guardar a saida
-  char retorno [11];
+  char retorno [11] ="Comando   ";
   int isserver;
   TPMENSAGEM mensagem;
-  strcpy(retorno,"Comando   ");
+  system("clear");
   if (argc < 2 && argc!=3)  // chamada de programa + porta
   {
     fprintf(stderr, "usage %s port isserver\n",argv[0]);

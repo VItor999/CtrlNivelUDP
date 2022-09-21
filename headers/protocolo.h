@@ -1,5 +1,5 @@
 /**
-*@file protocolnovo.h
+*@file protocolo.h
 *@author Lucas Esteves e Vitor Carvalho 
 *@brief Biblioteca própria auxiliar para a definição do protocolo.
 * Bostejo completo aqui
@@ -29,8 +29,8 @@
 #define S_GETLV "Level" 		/** String para identificar comandos: Level#999!  		 **/
 #define S_SETMAX "Max" 			/** String para identificar comandos: Max#999!			 **/
 #define S_ERRO "Err" 			/** String para identificar comandos: Err!   			 **/ 
-#define S_COMTEST "Comm" 		/** String para identificar comandos: Comm#Ok!        	 **/
-#define S_START "Start" 		/** String para identificar comandos: Start#Ok!			 **/
+#define S_COMTEST "Comm" 		/** String para identificar comandos: Comm#OK!        	 **/
+#define S_START "Start" 		/** String para identificar comandos: Start#OK!			 **/
 
 
 #define C_C_START 0 			/** Equivalente numérico da string C_START		**/
@@ -52,18 +52,24 @@
 // Terminadores e Token
 #define ENDMSG "!"			  	/** String do fim de mesnsagem do protocolo		**/
 #define TK "#"					/** String do separador de mensagem do protocolo**/
+#define OK "OK"					/** String definir o status OK					**/
 //
-typedef struct TPMENSAGEM // o que tu acha de retornarmos isso como resposta do analisa comando???
+/**
+*@brief Tipo que contém as informações de uma mensagem recebida
+*
+**/
+typedef struct TPMENSAGEM 		
 {
 	int valor;      // valor da mensagem
 	int sequencia;  // numero de sequencia
-	//int satus;		// já foi confirmado 
 	int comando;	// comando 
 } TPMENSAGEM;
 
 // Cabeçalhos
 TPMENSAGEM analisarComando(char *mensagem, int is_serv);
+void obterInfo(TPMENSAGEM *saida,TPMENSAGEM msg);
  
+
 
 /**
  * @brief Verifica integridade da mensagem e retorna o comando/dados relevantes
@@ -171,10 +177,10 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
 				printf("tk= %s\n",tk);
 			#endif	
 			//
-			if(strcmp(tk,S_COMTEST) == 0 && strcmp(strtok_r(resto, ENDMSG, &resto),"OK")==0){ 
+			if(strcmp(tk,S_COMTEST) == 0 && strcmp(strtok_r(resto, ENDMSG, &resto),OK)==0){ 
 				retorno.comando = C_C_COM;
 			}
-			else if (strcmp(tk,S_START)==0 && strcmp(strtok_r(resto, ENDMSG, &resto),"OK")==0) {
+			else if (strcmp(tk,S_START)==0 && strcmp(strtok_r(resto, ENDMSG, &resto),OK)==0) {
 				retorno.comando = C_C_START;
 			}
 			else if (strcmp(tk,S_OPEN)==0) {
@@ -230,6 +236,17 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
     return retorno; // retorno padrão
 }
 
+/**
+*@brief Função para obter a informações de uma mensagem e escrever em outro local
+*
+*@param saida Endereço de saída
+*@param msg Mensagem de entrada
+**/
+void obterInfo(TPMENSAGEM *saida,TPMENSAGEM msg){
+  	saida->valor =  msg.valor;
+  	saida->sequencia =  msg.sequencia;
+  	saida->comando =  msg.comando;
+}
 
 #define protocolo
 #endif

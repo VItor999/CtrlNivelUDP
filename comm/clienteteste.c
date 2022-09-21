@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
   char buffer[BUFFER_SIZE];
   char out = '\0'; // tecla em que irei guardar a saida
   char flagAguardo = 0;
+  system("clear");
   if (argc < 3)
   {
     fprintf(stderr, "usage %s hostname port\n", argv[0]);

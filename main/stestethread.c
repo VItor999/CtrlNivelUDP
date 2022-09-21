@@ -3,7 +3,7 @@
 /// na main atualizar a tela 
 /// thread para a leitura 
 
-#include "../headers/protocolnovo.h"
+#include "../headers/protocolo.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -40,6 +40,8 @@ void *threadComm(void *port){
   char buffer[BUFFER_SIZE];
   char out = ' '; 
   char retorno [11] ="Comando   ";
+  int flagNovaMsg = 0;
+  char msg[strlen(buffer)];
   sock = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_STREAM -> TCP/IP tempo de break é o zero poderiamos tentar alterar para outro blg 1 ms??
   // Esse bagulho não bloquei, minima ideia de como opera dar uma pesquisada em como usar o rev
   fcntl(sock, F_SETFL, O_NONBLOCK);
@@ -60,11 +62,25 @@ void *threadComm(void *port){
   fromlen = sizeof(struct sockaddr_in);
   printf("Servidor iniciado em thread, parabens\n");
   // de onde vem, onde escrevo, tamanho, argumento padrao, estrutura e tamanho
-   while (teclado() != 27 && buffer[0] != '\n') // pressionando esq encerro o server
+   while (OUT != 27 && buffer[0] != '\n') // pressionando esq encerro o server
   {
-      bzero(buffer, BUFFER_SIZE);
-    // de onde vem, onde escrevo, tamanho, argumento padrao, estrutura e tamanho
-    n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
+    OUT = teclado(); 
+    if (flagNovaMsg){ //pode dar ruim pois se tenho uma nova mesnsagem 
+      if(pthread_mutex_trylock(&mutexCOM)==0){
+        MENSAGEM = analisarComando(msg,isserver); //aqui já sei o que tenho que fazer
+        printf("MENSAGEM:%s \t COMANDO:%d \tSEQUENCIA :%d \tVALOR :%d\n",buffer,MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+        obterInfo(&mensagem,MENSAGEM);
+        pthread_mutex_unlock(&mutexCOM);
+        bzero(buffer, BUFFER_SIZE);
+        flagNovaMsg=0;
+      }
+      n=0;// não faço nada enquanto tenho uma nova mensagem e não consegui me livrar dela 
+    }
+    else{
+      // de onde vem, onde escrevo, tamanho, argumento padrao, estrutura e tamanho
+      n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
+    }
+    
     if (n < 0 && n != -1)
     {
       error("Receber");
@@ -75,15 +91,20 @@ void *threadComm(void *port){
       char *resto = buffer;
       tk = strtok_r(resto, "\n", &resto);
       printf("Received a datagram: %s \n", buffer);
-      char msg[strlen(buffer)];
+     
       strcpy(msg, buffer);
-      if(pthread_mutex_trylock(&mutexCOM)==0){
+      if(pthread_mutex_trylock(&mutexCOM)==0 && buffer[0]!='\n'){
         MENSAGEM = analisarComando(msg,isserver); //aqui já sei o que tenho que fazer
-        printf("MENSAGEM:%s \t COMANDO:%d \tSEQUENCIA :%d \tVALOR :%d\n",buffer,MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
-        mensagem.comando = MENSAGEM.comando;
-        mensagem.sequencia = MENSAGEM.sequencia;
-        mensagem.valor = MENSAGEM.valor;
+        //printf("MENSAGEM:%s \t COMANDO:%d \tSEQUENCIA :%d \tVALOR :%d\n",buffer,MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+        obterInfo(&mensagem,MENSAGEM);
         pthread_mutex_unlock(&mutexCOM);
+        bzero(buffer, BUFFER_SIZE);
+      }
+      else if (buffer[0]=='\n'){
+        OUT = 27;
+      }
+      else{
+        flagNovaMsg  = 1;
       }
       
 	  if(mensagem.comando==C_S_ERRO){
@@ -100,7 +121,7 @@ void *threadComm(void *port){
 		  retorno[strlen(retorno)]='\0';
 	  }
       n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
-	  printf("Enviando %s\n",retorno);
+	    printf("Enviando %s\n",retorno);
       if (n < 0)
       {
         error("Envio");
@@ -125,6 +146,7 @@ int main(int argc, char *argv[])
   // Argumentos recebibos sempre em array de char (string)
   // Só preciso passar a porta no servidor
   //---- Variáveis UDP
+  system("clear");
   pthread_t pthComm;       
   int r;
   //---- Variáveis 
@@ -157,16 +179,15 @@ int main(int argc, char *argv[])
   while (OUT != 27) // pressionando esq encerro o server
   {
     // bloco para captura de tecla
-    printf("Rodando MAIN ...\n");
-    OUT =  teclado();
+    //printf("Rodando MAIN ...\n");
+    //OUT =  teclado();
     sleep(2);
-    if(pthread_mutex_trylock(&mutexCOM)==0){
-      printf("MENSAGEM NA MAIN \t COMANDO:%d \tSEQUENCIA :%d \tVALOR :%d\n",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
-      // de onde vem, onde escrevo, tamanho, argumento padrao, estrutura e tamanho
-      pthread_mutex_unlock(&mutexCOM);
-    }
 
+    printf("MAIN:   COMANDO: %d   SEQUENCIA: %d   VALOR: %d\n",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+      // de onde vem, onde escrevo, tamanho, argumento padrao, estrutura e tamanho
   }
   pthread_join(pthComm, NULL);
+  printf("Encerrando a main");
   exit(EXIT_SUCCESS);
+  return 0;
 }
