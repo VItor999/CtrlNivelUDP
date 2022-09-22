@@ -1,4 +1,14 @@
-#include "../headers/protocolo.h"
+/**
+*@file serverteste.c
+*@author Lucas Esteves e Vitor Carvalho
+*@brief Código para teste manual do protocolo, pode emular respostas de um cliente ou servidor. 
+*@version 0.1
+*@date 2022-09-21
+*
+**/
+
+//===================== Bibliotecas utilizadas =====================//
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -8,13 +18,20 @@
 #include <netinet/in.h>
 #include <math.h>
 #include "../headers/kbhit.h"
+#include "../headers/protocolo.h"
+
+
+//====================== Definições efetuadas ======================//
 #define BUFFER_SIZE 1024
 
-void error(char *msg) // método para imprimir um erro, só passar uma mensagem
-{
-  perror(msg);
-  exit(0); // se colocar exit(1) ele não sai do programa
-}
+
+//===================== Cabeçalhos de Funções =====================//
+void error(const char *msg);
+
+
+//#################################################################//
+//#########################    MAIN    ############################//
+//#################################################################//
 
 int main(int argc, char *argv[])
 {
@@ -114,4 +131,13 @@ int main(int argc, char *argv[])
     }
   }
   printf("Encerrando SERVIDOR\n");
+}
+
+//#################################################################//
+//##################    Funções Auxiliares    #####################//
+//#################################################################//
+void error(const char *msg)
+{
+  perror(msg);
+  exit(0);
 }

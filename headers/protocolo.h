@@ -1,21 +1,27 @@
 /**
 *@file protocolo.h
 *@author Lucas Esteves e Vitor Carvalho 
-*@brief Biblioteca própria auxiliar para a definição do protocolo.
-* Bostejo completo aqui
+*@brief Biblioteca própria auxiliar para a definição do protocolo de comunição Utilizado.
 *@version 0.1
 *@date 2022-09-18
 *
 **/
+
+//===================== Bibliotecas utilizadas =====================//
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifndef protocolo
+
+//====================== Definições efetuadas ======================//
+
 //#define DEBUG 1
 // Defines do Protocolo próprio escrito do ponto de vista do cliente (COMANDOS AZUIS)
 // O_XXXX output qualquer comando DE SAIDA (AZUL NO PDF)
 // comando#XX#YYY!
-//		  12345678												  TS Tdoido
+//		  12345678		
+
+//-------------- Comandos enviamos pelo cliente -------------------//
 
 #define C_OPEN "OpenValve" 		/** String para identificar comandos: OpenValve#123#999! **/	
 #define C_CLOSE "CloseValve"	/** String para identificar comandos: CloseValve#13#999! **/  		  
@@ -23,6 +29,8 @@
 #define C_SETMAX "SetMax" 		/** String para identificar comandos: SetMax#123!		 **/	
 #define C_COMTEST "CommTest" 	/** String para identificar comandos: CommTest!		 	 **/
 #define C_START "Start"			/** String para identificar comandos: Start!  			 **/	
+
+//-------------- Comandos enviamos pelo servidor ------------------//
 
 #define S_OPEN "Open"     		/** String para identificar comandos: Open#123!			 **/
 #define S_CLOSE "Close"  		/** String para identificar comandos: Close#123!		 **/
@@ -32,6 +40,7 @@
 #define S_COMTEST "Comm" 		/** String para identificar comandos: Comm#OK!        	 **/
 #define S_START "Start" 		/** String para identificar comandos: Start#OK!			 **/
 
+//-------- Equivlencia numérica dos comandos do cliente -----------//
 
 #define C_C_START 0 			/** Equivalente numérico da string C_START		**/
 #define C_C_COM 1 				/** Equivalente numérico da string C_COMTEST	**/
@@ -40,6 +49,7 @@
 #define C_C_CLOSE 5 			/** Equivalente numérico da string C_CLOSE		**/
 #define C_C_OPEN 6 				/** Equivalente numérico da string C_OPEN		**/
 
+//-------- Equivlencia numérica dos comandos do servidor -----------//
 
 #define C_S_START 10 			/** Equivalente numérico da string S_START		**/
 #define C_S_COM 11	   			/** Equivalente numérico da string S_COMTEST	**/
@@ -49,13 +59,14 @@
 #define C_S_CLOSE 15 			/** Equivalente numérico da string S_CLOSE		**/
 #define C_S_OPEN 16 			/** Equivalente numérico da string S_OPEN		**/
 
-// Terminadores e Token
+//----------------- Outros elementos do protocolo -----------------//
+
 #define ENDMSG "!"			  	/** String do fim de mesnsagem do protocolo		**/
 #define TK "#"					/** String do separador de mensagem do protocolo**/
 #define OK "OK"					/** String definir o status OK					**/
-//
+
 /**
-*@brief Tipo que contém as informações de uma mensagem recebida
+*@brief Contêm as informações de uma mensagem recebida.
 *
 **/
 typedef struct TPMENSAGEM 		
@@ -65,15 +76,30 @@ typedef struct TPMENSAGEM
 	int comando;	// comando 
 } TPMENSAGEM;
 
-// Cabeçalhos
+
+//===================== Cabeçalhos de Funções =====================//
+
 TPMENSAGEM analisarComando(char *mensagem, int is_serv);
 void obterInfo(TPMENSAGEM *saida,TPMENSAGEM msg);
  
-
+//#################################################################//
+//########################   FUNÇÕES   ############################//
+//#################################################################//
 
 /**
- * @brief Verifica integridade da mensagem e retorna o comando/dados relevantes
- * DESCRIÇão elaborada do lucas aqui
+ * @brief Verifica integridade da mensagem e retorna o comando/dados relevantes.
+ *  Retorna o comando que deve ser eviando pela ponta da comunição que recebeu o 
+ *  comando. Exemplos: 
+ *  CASO 1:
+ *  Cliente -> OpenValve#123#999!
+ *  Resposta: retorno : TPMENSAGEM =  int valor = 999;
+ *								  int sequencia =123;  
+ *									  int comando = 16;	-> servidor deve abrir a válvula
+ *  CASO 2:
+ *  Servidor -> Open#123!
+ *  Resposta: retorno : TPMENSAGEM =  int valor = -1;
+ *								      int sequencia =123;  
+ *									  int comando = 6;	-> cliente recebeu um ACK
  * 
  * @param mensagem Endereço que contem a messagem (char array)
  * @param is_serv  Define em qual ponta da comunição a função é chamada
@@ -92,8 +118,7 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
     char *resto = mensagem;
     int numtoken = 0;
 	int i =0;
-	if (mensagem[len - 1] != ENDMSG[0]){//verifica se é o fim de uma msg
-
+	if (mensagem[len-1] != ENDMSG[0]){//verifica se é o fim de uma msg
         return retorno;
     }
     for(i=0; i<len;i++){ // verificando numero de tokens

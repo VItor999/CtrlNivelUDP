@@ -1,3 +1,14 @@
+/**
+*@file clienteteste.c
+*@author Lucas Esteves e Vitor Carvalho
+*@brief Código para teste manual do protocolo solicitado. 
+*@version 0.1
+*@date 2022-09-21
+*
+**/
+
+//===================== Bibliotecas utilizadas =====================//
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,12 +19,19 @@
 #include <netdb.h>
 #include <fcntl.h> // para non blocking sockets
 
+
+//====================== Definições efetuadas ======================//
+
 #define BUFFER_SIZE 1024
-void error(const char *msg)
-{
-  perror(msg);
-  exit(0);
-}
+
+
+//===================== Cabeçalhos de Funções =====================//
+void error(const char *msg);
+
+
+//#################################################################//
+//#########################    MAIN    ############################//
+//#################################################################//
 
 int main(int argc, char *argv[])
 {
@@ -59,7 +77,10 @@ int main(int argc, char *argv[])
     else // mandar uma  nova mensagem
     {
 	  bzero(buffer, BUFFER_SIZE);
-      fgets(buffer, BUFFER_SIZE - 1, stdin);
+    fgets(buffer, BUFFER_SIZE, stdin); 
+  
+    if (buffer[0]!='\n')buffer[strlen(buffer)-1]='\0';
+     // printf("%s%s",buffer,buffer);
 	  out=buffer[0];
       n = write(sockfd, buffer, strlen(buffer));
       if (n < 0 && n != -1){ //
@@ -79,4 +100,14 @@ int main(int argc, char *argv[])
   }
   close(sockfd);
   return 0;
+}
+
+
+//#################################################################//
+//##################    Funções Auxiliares    #####################//
+//#################################################################//
+void error(const char *msg)
+{
+  perror(msg);
+  exit(0);
 }
