@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <math.h>
 #include "../headers/kbhit.h"
-#include "../headers/protocol.h"
+#include "../headers/protocolo.h"
 #include <time.h>
 #define BUFFER_SIZE 1024
 
