@@ -7,7 +7,7 @@
 *
 **/
 
-//===================== Bibliotecas utilizadas =====================//
+//===================== Bibliotecas utilizadas ===================== //
 
 #include <stdio.h>
 #include <stdlib.h>
