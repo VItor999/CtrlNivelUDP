@@ -15,6 +15,7 @@
 
 //====================== Definições efetuadas ======================//
 
+
 //#define DEBUG 1
 // Defines do Protocolo próprio escrito do ponto de vista do cliente (COMANDOS AZUIS)
 // O_XXXX output qualquer comando DE SAIDA (AZUL NO PDF)
@@ -42,7 +43,7 @@
 
 //-------- Equivlencia numérica dos comandos do cliente -----------//
 
-#define C_C_START 0 			/** Equivalente numérico da string C_START		**/
+#define C_C_START 7			/** Equivalente numérico da string C_START		**/
 #define C_C_COM 1 				/** Equivalente numérico da string C_COMTEST	**/
 #define C_C_SET 3 				/** Equivalente numérico da string C_SETMAX		**/
 #define C_C_GET 4 				/** Equivalente numérico da string C_GETLV		**/
@@ -51,7 +52,7 @@
 
 //-------- Equivlencia numérica dos comandos do servidor -----------//
 
-#define C_S_START 10 			/** Equivalente numérico da string S_START		**/
+#define C_S_START 17 			/** Equivalente numérico da string S_START		**/
 #define C_S_COM 11	   			/** Equivalente numérico da string S_COMTEST	**/
 #define C_S_ERRO -1 			/** Equivalente numérico da string S_ERRO		**/
 #define C_S_SET 13  			/** Equivalente numérico da string S_SETMAX	 	**/
@@ -64,6 +65,7 @@
 #define ENDMSG "!"			  	/** String do fim de mesnsagem do protocolo		**/
 #define TK "#"					/** String do separador de mensagem do protocolo**/
 #define OK "OK"					/** String definir o status OK					**/
+#define VAZIO -99
 
 /**
 *@brief Contêm as informações de uma mensagem recebida.
@@ -93,7 +95,8 @@ void obterInfo(TPMENSAGEM *saida,TPMENSAGEM msg);
  *  CASO 1:
  *  Cliente -> OpenValve#123#999!
  *  Resposta: retorno : TPMENSAGEM =  int valor = 999;
- *								  int sequencia =123;  
+ *				 (Enviar(&sock,&server,&from,length,fromlen,buffer)<0)
+      {				  int sequencia =123;  
  *									  int comando = 16;	-> servidor deve abrir a válvula
  *  CASO 2:
  *  Servidor -> Open#123!

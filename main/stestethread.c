@@ -21,7 +21,10 @@
 //====================== Definições efetuadas ======================//
 
 #define DEBUG 1 
-#define BUFFER_SIZE 1024
+#define LIN 40  
+#define COL 2
+
+#define BUFFER_SIZE 100
 
 
 //======================= Variáveis Globais  ======================//
@@ -30,15 +33,18 @@ pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
 char OUT = ' ';
 TPMENSAGEM MENSAGEM;
 int isserver = 0;
-char teclado();
-
-
+int TABELA[LIN][COL];
+int LINHAATUAL =0;    		// linha atual da tabela
+int NOVAMENSAGEM
 //===================== Cabeçalhos de Funções =====================//
 
 char teclado();
 void *threadComm(void *port);
 void error(char *msg);
 
+void escreveTabela(TPMENSAGEM msg){
+  
+}
 
 //#################################################################//
 //#########################    MAIN    ############################//
@@ -157,7 +163,7 @@ void *threadComm(void *port){
     {
       error("Receber");
     }
-    if (n > 0)
+    if (n > 0)// captura de algo novo 
     {
       char *tk;
       char *resto = buffer;
@@ -166,11 +172,15 @@ void *threadComm(void *port){
       if (buffer[0]!='\n')printf("Received a datagram: %s \n", buffer);
       #endif
       strcpy(msg, buffer);
-      if(pthread_mutex_trylock(&mutexCOM)==0 && buffer[0]!='\n'){
-        MENSAGEM = analisarComando(msg,isserver); //aqui já sei o que tenho que fazer
+      if(pthread_mutex_trylock(&mutexCOM)==0 && buffer[0]!='\n'){ // ja consigo interpretar 
+	// intreprete 
+        MENSAGEM = analisarComando(msg,isserver); //Escreve pro mundo 
         //printf("MENSAGEM:%s \t COMANDO:%d \tSEQUENCIA :%d \tVALOR :%d\n",buffer,MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
-        obterInfo(&mensagem,MENSAGEM);
+        obterInfo(&mensagem,MENSAGEM); // copia local sla pq 
         pthread_mutex_unlock(&mutexCOM);
+	while(MENSAGEM.comando!= NULL); // fica travado esperando o simulador dizer que usou a info
+	// USO O  COMANDO DA COPIA E ATUALIZO A TABELA
+	//enviar para o simulador
         bzero(buffer, BUFFER_SIZE);
       }
       else if (buffer[0]=='\n'){

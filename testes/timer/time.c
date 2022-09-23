@@ -15,7 +15,7 @@ int main(int argc, char **argv)
     // struct timespec: opera com dois long ints internamente 
     // o primeiro tv_sec := contem o valor em segundos 
     // o segundo  tv._nsec := contem o valor em nsegundos.
-    //                        obviamente, vai até 999999999 nsegundos
+    //                        obviamente, vai até 999999999 nsegundos  --> 000000000
     clockid_t clk_id;
     system("clear");
     //  clk_id = CLOCK_REALTIME;
@@ -30,7 +30,8 @@ int main(int argc, char **argv)
     printf("inicial.tv_nsec: %ld\n", inicial.tv_nsec);
     while (deltaT < twait*1000){
         if((atual.tv_sec-inicial.tv_sec)>0) {// se passou 1 segundo
-            deltaT =(atual.tv_nsec/1000)+1000000-inicial.tv_nsec/1000;
+            deltaT =(atual.tv_nsec/1000)+1000000-inicial.tv_nsec/1000; // todos em ms
+            // 300 
         }
         else {
             deltaT =(atual.tv_nsec/1000)-inicial.tv_nsec/1000;
