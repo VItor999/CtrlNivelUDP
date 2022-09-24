@@ -27,7 +27,6 @@
 
 #define BUFFER_SIZE 100
 
-
 //======================= Variáveis Globais  ======================//
 
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
@@ -37,6 +36,7 @@ int isserver = 0;
 int TABELA[LIN][COL];
 int LINHAATUAL =0;    		// linha atual da tabela
 int NOVAMENSAGEM =0;
+int TABREINIC =0;    /* Flag para indicar o reinicio do preenchimento da tabela*/
 //===================== Cabeçalhos de Funções =====================//
 
 char teclado();
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]){
     //OUT =  teclado();
     //waitms(999);
     if (NOVAMENSAGEM && pthread_mutex_trylock(&mutexCOM)==0){
-      printf("\tCOM %d\tSEQ %d\tVAL %d",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+      printf("LA %d \tCOM %d\tSEQ %d\tVAL %d",LINHAATUAL,MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
       simulador();
       NOVAMENSAGEM = 0;
       pthread_mutex_unlock(&mutexCOM);
@@ -143,7 +143,6 @@ void *threadComm(void *port){
     }
     if (n < 0 && n != -1){
       error("Receber");
-    
     }else if (n > 0){// captura de algo novo 
       char *tk;
       char *resto = buffer;
@@ -151,19 +150,17 @@ void *threadComm(void *port){
       #ifdef DEBUG
       if (buffer[0]!='\n')printf("RECV %s", buffer);
       #endif
-      
       strcpy(msg, buffer);
       bzero(buffer, BUFFER_SIZE);
-      
-      if (msg[0]=='\n'){
+      if (msg[0]=='\n'){ // desligar servidor 
         OUT = 27;
-      
-      }else if(pthread_mutex_trylock(&mutexCOM)==0 || flagNovaMsg){ //peguei mutex
+      }
+      else if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
         mensagem = analisarComando(msg,isserver);
-        if(verifica_tabela(mensagem)==0){
+        if(verifica_tabela(mensagem)==0){ // verifica se não é repetida
           obterInfo(&MENSAGEM,mensagem);  //Escreve pro mundo
-          NOVAMENSAGEM = 1;
-          pthread_mutex_unlock(&mutexCOM);
+          NOVAMENSAGEM = 1;  //notifica o mundo
+          pthread_mutex_unlock(&mutexCOM); // libera o mutex
 
           while(MENSAGEM.comando != 0){ // fica travado esperando o simulador dizer que usou a info
             //printf("AGUARDANDO SIMULADOR\n");
@@ -193,16 +190,20 @@ void *threadComm(void *port){
           mensagem.comando=C_S_ERRO;
           responde_cliente(mensagem, retorno);
         }
-
-        n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
-        if (n < 0){
-          error("Envio");
-        }else{
-          printf("\tSEND %s\n",retorno);
+        //responder o cliente 
+        if (random()%14 != 0) {
+          n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
+          if (n < 0){
+            error("Envio");
+          }else{
+            printf("\tSEND %s\n",retorno);
+          }
+        }
+        else{
+          printf("\tPERDEU\n");
         }
         bzero(retorno,RETURN_SIZE);
         flagNovaMsg = 0;
-
       }else{ //nao consegui mutex e preciso eventualmente me livrar da msg
         flagNovaMsg = 1;
       }
@@ -261,20 +262,50 @@ void atualiza_tabela(TPMENSAGEM msg){
   TABELA[LINHAATUAL][0]=msg.comando;
   TABELA[LINHAATUAL][1]=msg.sequencia;
   TABELA[LINHAATUAL][2]=msg.valor;
-  LINHAATUAL++;
+  if (LINHAATUAL == LIN - 1){
+    LINHAATUAL = 0; // reinicia ciclo
+    TABREINIC = 1;
+  }
+  else if (TABREINIC == 1 && LINHAATUAL - TOL ==0){
+    TABREINIC = 0;
+    LINHAATUAL++; 
+  }
+  else{
+    LINHAATUAL++; 
+  }
 }
 
 int verifica_tabela(TPMENSAGEM msg){
   int i, flag_retorno = 0; //inicializa flag de retorno para o padrao sem "erro"
   //Verifica se alguma linha da tabela possui a mesma correspondencia
   //int cont=0;
-  for(i=LINHAATUAL;(i>LINHAATUAL-TOL && i>=0 && flag_retorno!=1);i--){
-    if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
-      printf("\tMENSAGEM REPETIDA!!!");
-      flag_retorno = 1; //ativa flag de retorno para "erro"
+  if(TABREINIC == 0){ 
+    for(i=LINHAATUAL;(i>LINHAATUAL-TOL && i>=0 && flag_retorno!=1);i--){
+      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
+        printf("\tMENSAGEM REPETIDA!!!");
+        flag_retorno = 1; //ativa flag de retorno para "erro"
+      }
+      //cont++;
     }
-    //cont++;
   }
+  else{
+     // 31 .... 39 -> primeiro for 
+     // zero flag 
+     for(i=LIN-LINHAATUAL-TOL;(i<LIN && flag_retorno!=1);i++){
+      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
+        printf("\tMENSAGEM REPETIDA!!!");
+        flag_retorno = 1; //ativa flag de retorno para "erro"
+      }
+      //cont++;
+    }
+    for(i =0; (i<LINHAATUAL && flag_retorno!=1);i++){
+       if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
+        printf("\tMENSAGEM REPETIDA!!!");
+        flag_retorno = 1; //ativa flag de retorno para "erro"
+      }
+    }
+  }
+  // 0 1 2 3 4 
   //printf("\tcont: %d\n",cont);
   return flag_retorno;
 }
