@@ -25,7 +25,7 @@
 //-------------- Comandos enviamos pelo cliente -------------------//
 
 #define C_OPEN "OpenValve" 		/** String para identificar comandos: OpenValve#123#999! **/	
-#define C_CLOSE "CloseValve"	/** String para identificar comandos: CloseValve#13#999! **/  		  
+#define C_CLOSE "CloseValve"	/** String para identificar comandos: CloseValve#132#888! **/  		  
 #define C_GETLV "GetLevel"		/** String para identificar comandos: GetLevel!		 	 **/
 #define C_SETMAX "SetMax" 		/** String para identificar comandos: SetMax#123!		 **/	
 #define C_COMTEST "CommTest" 	/** String para identificar comandos: CommTest!		 	 **/
@@ -66,6 +66,7 @@
 #define TK "#"					/** String do separador de mensagem do protocolo**/
 #define OK "OK"					/** String definir o status OK					**/
 #define VAZIO -99
+#define MAXLEVEL 100
 
 /**
 *@brief Contêm as informações de uma mensagem recebida.
@@ -136,7 +137,6 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
 				tk=strtok_r(resto,ENDMSG,&resto); 
 				if (strcmp(tk, C_GETLV) == 0){
 					retorno.comando = C_S_GET;
-				
 				}
 				else if (strcmp(tk, C_START) == 0){
 					retorno.comando =  C_S_START;
@@ -159,6 +159,7 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
 					//possível solução: utilizar um for
 					//if (strcmp(tk,itoa(retorno.sequencia))){}
 					retorno.comando = C_S_SET;
+					retorno.valor = MAXLEVEL;
 				}
 				else{
 					return retorno;

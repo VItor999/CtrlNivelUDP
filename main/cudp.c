@@ -7,22 +7,56 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fcntl.h> // para non blocking sockets
+#include "../headers/tempo.h"
+#include "../headers/protocolo.h"
+#include "../headers/kbhit.h"
 
-#define BUFFER_SIZE 1024
-void error(const char *msg)
-{
+#define BUFFER_SIZE 100
+#define TAM 10
+
+void error(const char *msg){
   perror(msg);
   exit(0);
 }
 
-int main(int argc, char *argv[])
-{
+void simula_comm(char buffer[]){
+  char aux[TAM] = "\0";
+  char STR_COMM[19] = "OpenValve#";
+
+  snprintf(aux, TAM, "%d", random()%1000);
+  strcat(STR_COMM,aux);
+  strcat(STR_COMM,TK);
+  bzero(aux,TAM);
+  snprintf(aux, TAM, "%d", random()%100);
+  strcat(STR_COMM,aux);
+  strcat(STR_COMM,ENDMSG);
+  if(random()%11==0){
+    waitms(1000);
+  }
+  printf("%s ",STR_COMM);
+  strcpy(buffer,STR_COMM);
+}
+
+char teclado(){
+  char r ='e';
+  // bloco para captura de tecla
+  if (kbhit()){ // LINUX não tem um kbhit() como o windows -> ver arquivo kbhit.h
+    r = getchar();
+  } 
+  return r;
+}
+
+int main(int argc, char *argv[]){
   int sockfd, portno, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;
   char buffer[BUFFER_SIZE];
   char out = '\0'; // tecla em que irei guardar a saida
-  char flagAguardo = 0;
+  int flagAguardo = 0;
+
+  system("clear");
+  srandom(time(NULL));   //Initialization, should only be called once.
+
   if (argc < 3)
   {
     fprintf(stderr, "usage %s hostname port\n", argv[0]);
@@ -48,34 +82,38 @@ int main(int argc, char *argv[])
   if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     error("ERROR connecting");
   
-  printf("Please enter the message: ");
+  printf("Cliente inicializado, parabens\n");
   
-  while (out != '\n'){
-    if (flagAguardo) // estaria aguardando receber a resposta para continuar com uma nova escrita
-    {
-      printf("Continuo rodando\n");
-    }
-    else // mandar uma  nova mensagem
-    {
-	  bzero(buffer, BUFFER_SIZE);
-      fgets(buffer, BUFFER_SIZE - 1, stdin);
-	  out=buffer[0];
+
+  while (teclado() != '\n'){
+    if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
+      //printf("Continuo rodando\n");
+      printf(".");
+    
+    }else{ // mandar uma  nova mensagem
+      bzero(buffer, BUFFER_SIZE);
+      //fgets(buffer, BUFFER_SIZE - 1, stdin);
+      simula_comm(buffer);
+      //out=buffer[0];
       n = write(sockfd, buffer, strlen(buffer));
       if (n < 0 && n != -1){ //
         error("ERROR writing to socket");
-	  }else{
-		flagAguardo = 1;
+      }else{
+        flagAguardo = 1;
+      }
 	  }
-	}
     bzero(buffer, BUFFER_SIZE);
     n = read(sockfd, buffer, BUFFER_SIZE-1);
     if (n < 0 && n != -1) // -1 quando não existe nada para ser lido
       error("ERROR reading from socket");
     else if (n != -1){
-      printf("LIDO: %s\n", buffer);
+      printf("\tRECV: %s\n", buffer);
       flagAguardo = 0;
     }
+    waitms(100);
   }
+  n = write(sockfd, "\n", 1);
   close(sockfd);
+  printf("Encerrando cliente\n\n");
   return 0;
 }
