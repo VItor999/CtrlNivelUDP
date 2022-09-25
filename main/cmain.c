@@ -11,7 +11,7 @@
 #include "../headers/protocolo.h"
 #include "../headers/kbhit.h"
 
-#define DEBUG
+//#define AUTO 1
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
@@ -27,41 +27,17 @@ int LINHAATUAL = 0;
 void error(const char *msg);
 void simula_comm(char buffer[]);
 char teclado();
+void guarda_comando(TPMENSAGEM msg);
+void confirma_comando(TPMENSAGEM msg);
+void inicializa_pos();
 
-void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao confirmado
-    TABELA[POS[DISPONIVEL]][0]=msg.comando; //consulta vetor de posicoes disponiveis para guardar o comando
-    TABELA[POS[DISPONIVEL]][1]=msg.sequencia;
-    TABELA[POS[DISPONIVEL]][2]=msg.valor;
-    if(POS[DISPONIVEL]==LINHAATUAL){ //acresce linhaatual se esta for a disponivel, do contrario mantem igual (pos até onde ja foi escrito)
-        LINHAATUAL++;
-    }
-    POS[DISPONIVEL]=-1; //coloca valor invalido no vetor de posicoes para marcar
-    DISPONIVEL--;   //diminui o numero de posicoes disponiveis
+void imprime_tabela(){
+  int i;
+  for(i=0; i<LINHAATUAL;i++){
+    printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
+  }
 }
 
-void confirma_comando(TPMENSAGEM msg){
-    int i, encontrou=0;
-    for(i=0;i<(LINHAATUAL && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
-        if(msg.comando == TABELA[i][0] && (msg.sequencia == TABELA[i][1] || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
-            TABELA[i][0]=0;
-            TABELA[i][1]=0;
-            TABELA[i][2]=0;
-            if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
-                LINHAATUAL--;
-            }
-            POS[DISPONIVEL]=i;  //guarda no vetor a posição disponivel
-            DISPONIVEL++;
-            encontrou=1;
-        }
-    }
-}
-
-void inicializa_pos(){  //inicia vetor com valor ao contrario dos indices
-    int i;
-    for(i=0;i<LIN;i++){
-        POS[i]=LIN-i-1;
-    }
-}
 
 int main(int argc, char *argv[]){
     int sockfd, portno, n;
@@ -109,11 +85,12 @@ int main(int argc, char *argv[]){
     printf("Cliente inicializado, parabens\n");
     
     inicializa_pos();
-    while (teclado() != '\n'){
+    while (/*teclado() != '\n' &&*/ out != '\n'){
         //waitms(WAIT);
         if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
             //printf("Continuo rodando\n");
             //printf(".");
+            #ifdef AUTO
             clock_gettime(clk_id,&atual);
             if((atual.tv_sec-start.tv_sec)>0) {
                 deltaT =(atual.tv_nsec/1000)+1000000-start.tv_nsec/1000;
@@ -126,12 +103,15 @@ int main(int argc, char *argv[]){
                 printf("LOST");
                 //perdido = 1;
             }
+            #endif
         }else{ // mandar uma  nova mensagem
             bzero(buffer, BUFFER_SIZE);
-            //fgets(buffer, BUFFER_SIZE - 1, stdin);
-            simula_comm(buffer);
-            //out=buffer[0];
+            //simula_comm(buffer);
+            fgets(buffer, BUFFER_SIZE, stdin);
+            if (buffer[0]!='\n')buffer[strlen(buffer)-1]='\0';
+            out=buffer[0];
             n = write(sockfd, buffer, strlen(buffer));
+            
             if (n < 0 && n != -1){ //
                 error("ERROR writing to socket");
             }else{
@@ -143,17 +123,21 @@ int main(int argc, char *argv[]){
             }
         }
         bzero(buffer, BUFFER_SIZE);
-    
         n = read(sockfd, buffer, BUFFER_SIZE-1);
-        //printf("tentando ler");
+        
         if (n < 0 && n != -1) // -1 quando não existe nada para ser lido
             error("ERROR reading from socket");
-        else if (n != -1){
+        else if (n > 0){
             strcpy(msg,buffer);
             mensagem_recv = analisarComando(buffer, 0);
-            if(((mensagem_recv.comando+10) == mensagem_send.comando && mensagem_recv.sequencia == mensagem_send.sequencia) || mensagem_recv.comando == C_S_ERRO){
+            //printf("\t%s\n", msg);
+            printf("sent:%d\trecv:%d\n",mensagem_send.comando,mensagem_recv.comando+10);
+            if((((mensagem_recv.comando) == mensagem_send.comando) && (mensagem_recv.sequencia == mensagem_send.sequencia)) || mensagem_recv.comando == C_S_ERRO){
                 printf("\tRECV: %s", msg);
                 flagAguardo = 0;
+                #ifndef AUTO
+                printf("\n");
+                #endif
             }
             /*else{
                 printf("\n");
@@ -164,7 +148,43 @@ int main(int argc, char *argv[]){
     n = write(sockfd, "\n", 1);
     close(sockfd);
     printf("\n\nEncerrando cliente\n\n");
+    imprime_tabela();
     return 0;
+}
+
+void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao confirmado
+    TABELA[POS[DISPONIVEL]][0]=msg.comando; //consulta vetor de posicoes disponiveis para guardar o comando
+    TABELA[POS[DISPONIVEL]][1]=msg.sequencia;
+    TABELA[POS[DISPONIVEL]][2]=msg.valor;
+    if(POS[DISPONIVEL]==LINHAATUAL){ //acresce linhaatual se esta for a disponivel, do contrario mantem igual (pos até onde ja foi escrito)
+        LINHAATUAL++;
+    }
+    POS[DISPONIVEL]=-1; //coloca valor invalido no vetor de posicoes para marcar
+    DISPONIVEL--;   //diminui o numero de posicoes disponiveis
+}
+
+void confirma_comando(TPMENSAGEM msg){
+    int i, encontrou=0;
+    for(i=0;i<(LINHAATUAL && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
+        if(msg.comando == TABELA[i][0] && (msg.sequencia == TABELA[i][1] || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
+            TABELA[i][0]=0;
+            TABELA[i][1]=0;
+            TABELA[i][2]=0;
+            if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
+                LINHAATUAL--;
+            }
+            POS[DISPONIVEL]=i;  //guarda no vetor a posição disponivel
+            DISPONIVEL++;
+            encontrou=1;
+        }
+    }
+}
+
+void inicializa_pos(){  //inicia vetor com valor ao contrario dos indices
+    int i;
+    for(i=0;i<LIN;i++){
+        POS[i]=LIN-i-1;
+    }
 }
 
 void error(const char *msg){
