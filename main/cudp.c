@@ -33,7 +33,7 @@ void simula_comm(char buffer[]){
   strcat(STR_COMM,aux);
   strcat(STR_COMM,ENDMSG);
  // if(random()%11==0){
-   waitms(WAIT);
+   //waitms(WAIT);
  // }
   printf("%s ",STR_COMM);
   strcpy(buffer,STR_COMM);
@@ -96,19 +96,6 @@ int main(int argc, char *argv[]){
     if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
       //printf("Continuo rodando\n");
       printf(".");
-      clock_gettime(clk_id,&atual);
-      if((atual.tv_sec-start.tv_sec)>0) {// se passou 1 segundo
-          deltaT =(atual.tv_nsec/1000)+1000000-start.tv_nsec/1000;
-      }
-      else {
-          deltaT =(atual.tv_nsec/1000)-start.tv_nsec/1000;
-      }
-      if (deltaT>= TIMEOUT){
-        flagAguardo = 0;
-        printf("PERDEU\n");
-        perdido =1;
-      }
-    
     }else{ // mandar uma  nova mensagem
       bzero(buffer, BUFFER_SIZE);
       //fgets(buffer, BUFFER_SIZE - 1, stdin);
@@ -118,7 +105,6 @@ int main(int argc, char *argv[]){
       if (n < 0 && n != -1){ //
         error("ERROR writing to socket");
       }else{
-        clock_gettime(clk_id,&start);
         flagAguardo = 1;
       }
 	  }
@@ -128,12 +114,9 @@ int main(int argc, char *argv[]){
     
     if (n < 0 && n != -1) // -1 quando não existe nada para ser lido
       error("ERROR reading from socket");
-    else if (n != -1 && !perdido){
+    else if (n != -1){
       printf("\tRECV: %s\n", buffer);
       flagAguardo = 0;
-    }
-    else if (){
-      perdido =0; 
     }
   }
   n = write(sockfd, "\n", 1);

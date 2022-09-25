@@ -14,9 +14,9 @@
 #define DEBUG
 #define BUFFER_SIZE 100
 #define TAM 10
-#define TIMEOUT 750 // milissegundos
-#define WAIT 500
-#define LIN 40  
+#define TIMEOUT 100 // milissegundos
+#define WAIT 80
+#define LIN 1000  
 #define COL 3
 
 int TABELA[LIN][COL]={0};
@@ -69,10 +69,11 @@ int main(int argc, char *argv[]){
     struct hostent *server;
     struct timespec start;
     struct timespec atual;
-    int long deltaT =0; 
+    long int deltaT = 0; 
     clockid_t clk_id;
     clk_id = CLOCK_MONOTONIC_RAW;
     char buffer[BUFFER_SIZE];
+    char msg[BUFFER_SIZE];
     char out = '\0'; // tecla em que irei guardar a saida
     int flagAguardo = 0;
     //int perdido =0; 
@@ -109,22 +110,22 @@ int main(int argc, char *argv[]){
     
     inicializa_pos();
     while (teclado() != '\n'){
+        //waitms(WAIT);
         if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
-        //printf("Continuo rodando\n");
-        printf(".");
-        clock_gettime(clk_id,&atual);
-        if((atual.tv_sec-start.tv_sec)>0) {
-            deltaT =(atual.tv_nsec/1000)+1000000-start.tv_nsec/1000;
-        }
-        else {
-            deltaT =(atual.tv_nsec/1000)-start.tv_nsec/1000;
-        }
-        if (deltaT >= TIMEOUT){
-            flagAguardo = 0;
-            printf("PERDEU\n");
-            //perdido = 1;
-        }
-        
+            //printf("Continuo rodando\n");
+            //printf(".");
+            clock_gettime(clk_id,&atual);
+            if((atual.tv_sec-start.tv_sec)>0) {
+                deltaT =(atual.tv_nsec/1000)+1000000-start.tv_nsec/1000;
+            }
+            else {
+                deltaT =(atual.tv_nsec/1000)-start.tv_nsec/1000;
+            }
+            if (deltaT >= TIMEOUT*1000){
+                flagAguardo = 0;
+                printf("LOST");
+                //perdido = 1;
+            }
         }else{ // mandar uma  nova mensagem
             bzero(buffer, BUFFER_SIZE);
             //fgets(buffer, BUFFER_SIZE - 1, stdin);
@@ -134,8 +135,9 @@ int main(int argc, char *argv[]){
             if (n < 0 && n != -1){ //
                 error("ERROR writing to socket");
             }else{
-                mensagem_send = analisarComando(buffer, 0);
+                mensagem_send = analisarComando(buffer, 1);
                 clock_gettime(clk_id,&start);
+                //printf("start: %lld\n", start.tv_nsec);
                 guarda_comando(mensagem_send);
                 flagAguardo = 1;
             }
@@ -143,31 +145,34 @@ int main(int argc, char *argv[]){
         bzero(buffer, BUFFER_SIZE);
     
         n = read(sockfd, buffer, BUFFER_SIZE-1);
-        
+        //printf("tentando ler");
         if (n < 0 && n != -1) // -1 quando não existe nada para ser lido
             error("ERROR reading from socket");
-        else{
-            if (n != -1 && mensagem_recv.comando == mensagem_send.comando){
-                printf("\tRECV: %s\n", buffer);
-                mensagem_recv = analisarComando(buffer, 0);
-                confirma_comando(mensagem_recv);
+        else if (n != -1){
+            strcpy(msg,buffer);
+            mensagem_recv = analisarComando(buffer, 0);
+            if(((mensagem_recv.comando+10) == mensagem_send.comando && mensagem_recv.sequencia == mensagem_send.sequencia) || mensagem_recv.comando == C_S_ERRO){
+                printf("\tRECV: %s", msg);
                 flagAguardo = 0;
-            
             }
+            /*else{
+                printf("\n");
+            }*/
+            confirma_comando(mensagem_recv);
         }
     }
     n = write(sockfd, "\n", 1);
     close(sockfd);
-    printf("Encerrando cliente\n\n");
+    printf("\n\nEncerrando cliente\n\n");
     return 0;
-    }
+}
 
-    void error(const char *msg){
+void error(const char *msg){
     perror(msg);
     exit(0);
-    }
+}
 
-    void simula_comm(char buffer[]){
+void simula_comm(char buffer[]){
     char aux[TAM] = "\0";
     char STR_COMM[19] = "OpenValve#";
 
@@ -178,14 +183,14 @@ int main(int argc, char *argv[]){
     snprintf(aux, TAM, "%d", random()%100);
     strcat(STR_COMM,aux);
     strcat(STR_COMM,ENDMSG);
-    // if(random()%11==0){
-    waitms(WAIT);
-    // }
-    printf("%s ",STR_COMM);
+    /*if(random()%11==0){
+        waitms(999);
+    }*/
+    printf("\n%s ",STR_COMM);
     strcpy(buffer,STR_COMM);
-    }
+}
 
-    char teclado(){
+char teclado(){
     char r ='e';
     // bloco para captura de tecla
     if (kbhit()){ // LINUX não tem um kbhit() como o windows -> ver arquivo kbhit.h

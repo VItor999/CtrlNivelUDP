@@ -41,4 +41,5 @@ int main(int argc, char **argv)
     }
     printf("atual.tv_sec: %lld\n", atual.tv_sec);
     printf("atual.tv_nsec: %ld\n", atual.tv_nsec);
+    printf("deltaT: %ld\n", deltaT);
 }

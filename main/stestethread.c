@@ -108,7 +108,6 @@ int main(int argc, char *argv[]){
 //#################################################################//
 
 void *threadComm(void *port){
-
   TPMENSAGEM mensagem;
   int sock, length, fromlen, n = -1;
   struct sockaddr_in server;
@@ -192,7 +191,11 @@ void *threadComm(void *port){
           responde_cliente(mensagem, retorno);
         }
         //responder o cliente 
-        if (random()%14 != 0) {
+        if (random()%9 != 0) {
+          if(random()%3 == 0){  
+            waitms(100);
+            printf("\tDELAY");
+          }
           n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
           if (n < 0){
             error("Envio");
