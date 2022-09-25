@@ -24,8 +24,8 @@
 #define LIN 40  
 #define COL 3
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
-
 #define BUFFER_SIZE 100
+#define RETURN_SIZE 10
 
 //======================= Variáveis Globais  ======================//
 
@@ -33,10 +33,10 @@ pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
 char OUT = ' ';
 TPMENSAGEM MENSAGEM;
 int isserver = 0;
-int TABELA[LIN][COL];
-int LINHAATUAL =0;    		// linha atual da tabela
 int NOVAMENSAGEM =0;
-int TABREINIC =0;    /* Flag para indicar o reinicio do preenchimento da tabela*/
+int TABELA[LIN][COL]={0};
+int LINHAATUAL = 0;    		// linha atual da tabela
+int TABREINIC = 0;    /* Flag para indicar o reinicio do preenchimento da tabela*/
 //===================== Cabeçalhos de Funções =====================//
 
 char teclado();
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]){
     //OUT =  teclado();
     //waitms(999);
     if (NOVAMENSAGEM && pthread_mutex_trylock(&mutexCOM)==0){
-      printf("LA %d \tCOM %d\tSEQ %d\tVAL %d",LINHAATUAL,MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+      printf("\tCOM %d\tSEQ %d\tVAL %d",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
       simulador();
       NOVAMENSAGEM = 0;
       pthread_mutex_unlock(&mutexCOM);
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]){
 //#################################################################//
 
 void *threadComm(void *port){
-  #define RETURN_SIZE 10
+
   TPMENSAGEM mensagem;
   int sock, length, fromlen, n = -1;
   struct sockaddr_in server;
@@ -118,6 +118,7 @@ void *threadComm(void *port){
   char retorno [RETURN_SIZE]="\0";
   int flagNovaMsg = 0;
   char msg[strlen(buffer)];
+
   sock = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_STREAM -> TCP/IP tempo de break é o zero poderiamos tentar alterar para outro blg 1 ms??
   // Esse bagulho não bloquei, minima ideia de como opera dar uma pesquisada em como usar o rev
   fcntl(sock, F_SETFL, O_NONBLOCK);
