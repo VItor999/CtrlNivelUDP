@@ -59,6 +59,7 @@ int main(int argc, char *argv[]){
   // Só preciso passar a porta no servidor
   //---- Variáveis UDP
   system("clear");
+  srandom(time(NULL));
   pthread_t pthComm;       
   int r;
   //---- Variáveis 
@@ -193,7 +194,7 @@ void *threadComm(void *port){
         //responder o cliente 
         if (random()%9 != 0) {
           if(random()%3 == 0){  
-            waitms(100);
+            waitms(500);
             printf("\tDELAY");
           }else{
             printf("\t");

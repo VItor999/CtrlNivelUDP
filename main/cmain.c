@@ -13,12 +13,14 @@
 
 #define AUTO 1
 //#define RAND 1
+#define DEBUG 1
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
 #define WAIT 80
-#define LIN 1000  
+#define LIN 50  
 #define COL 3
+#define NUM_COMM 100
 
 int TABELA[LIN][COL]={0};
 int POS[LIN];
@@ -31,14 +33,7 @@ char teclado();
 void guarda_comando(TPMENSAGEM msg);
 void confirma_comando(TPMENSAGEM msg);
 void inicializa_pos();
-
-void imprime_tabela(){
-  int i;
-  printf("TABELOSA\n");
-  for(i=0; i<LINHAATUAL-1;i++){
-    printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
-  }
-}
+void imprime_tabela();
 
 
 int main(int argc, char *argv[]){
@@ -87,6 +82,8 @@ int main(int argc, char *argv[]){
     printf("Cliente inicializado, parabens\n");
     
     inicializa_pos();
+    int CONT_IN = 0;
+    int CONT_OUT = 0;
     while (teclado() != '\n' && out != '\n'){
         //waitms(WAIT);
         if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
@@ -106,25 +103,28 @@ int main(int argc, char *argv[]){
                 //perdido = 1;
             }
             #endif
-        }else{ // mandar uma  nova mensagem
-            bzero(buffer, BUFFER_SIZE);
-            #ifdef AUTO
-            simula_comm(buffer);
-            #endif
-            #ifndef AUTO
-            fgets(buffer, BUFFER_SIZE, stdin);
-            if (buffer[0]!='\n')buffer[strlen(buffer)-1]='\0';
-            #endif
-            out=buffer[0];
-            n = write(sockfd, buffer, strlen(buffer));
-            if (n < 0 && n != -1){ //
-                error("ERROR writing to socket");
-            }else{
-                mensagem_send = analisarComando(buffer, 1);
-                clock_gettime(clk_id,&start);
-                //printf("start: %lld\n", start.tv_nsec);
-                guarda_comando(mensagem_send); // já escreve na tabela 
-                flagAguardo = 1;
+        }else{// mandar uma  nova mensagem
+            if(CONT_OUT<=NUM_COMM-1){
+                bzero(buffer, BUFFER_SIZE);
+                #ifdef AUTO
+                simula_comm(buffer);
+                #endif
+                #ifndef AUTO
+                fgets(buffer, BUFFER_SIZE, stdin);
+                if (buffer[0]!='\n')buffer[strlen(buffer)-1]='\0';
+                #endif
+                out=buffer[0];
+                n = write(sockfd, buffer, strlen(buffer));
+                if (n < 0 && n != -1){ //
+                    error("ERROR writing to socket");
+                }else{
+                    mensagem_send = analisarComando(buffer, 1);
+                    clock_gettime(clk_id,&start);
+                    //printf("start: %lld\n", start.tv_nsec);
+                    guarda_comando(mensagem_send); // já escreve na tabela 
+                    flagAguardo = 1;
+                    CONT_OUT++;
+                }
             }
         }
         bzero(buffer, BUFFER_SIZE);
@@ -132,13 +132,13 @@ int main(int argc, char *argv[]){
         
         if (n < 0 && n != -1) // -1 quando não existe nada para ser lido
             error("ERROR reading from socket");
-        else if (n > 0){
+        else if (n > 0){ //NOVA MENSAGEM CAPTURADA
             strcpy(msg,buffer);
             mensagem_recv = analisarComando(buffer, 0);
             //printf("\t%s\n", msg);
             //printf("sent:%d\trecv:%d\n",mensagem_send.comando,mensagem_recv.comando+10);
             if((((mensagem_recv.comando+10) == mensagem_send.comando) && (mensagem_recv.sequencia == mensagem_send.sequencia)) || mensagem_recv.comando == C_S_ERRO){
-                printf("\tRECV: %s", msg);
+                //printf("\tRECV: %s", msg);
                 flagAguardo = 0;
                 #ifndef AUTO
                 printf("\n");
@@ -147,6 +147,7 @@ int main(int argc, char *argv[]){
             /*else{
                 printf("\n");
             }*/
+            printf("\tRECV: %s", msg);
             confirma_comando(mensagem_recv); //tambem escreve na tabela apagando se recebeu erro 
         }
     }
@@ -166,25 +167,44 @@ void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao conf
     }
     POS[DISPONIVEL]=-1; //coloca valor invalido no vetor de posicoes para marcar
     DISPONIVEL--;   //diminui o numero de posicoes disponiveis
-    printf("LA: %d\n",LINHAATUAL);
+    #ifdef DEBUG
+    printf("POSg:%d ",POS[DISPONIVEL]);
+    printf("LAg:%d\t",LINHAATUAL);
+    #endif
 }
 
 void confirma_comando(TPMENSAGEM msg){
     int i, encontrou=0;
-    for(i=0;i<(LINHAATUAL && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
-        if(msg.comando +10 == TABELA[i][0] && (msg.sequencia == TABELA[i][1] || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
+    for(i=0;(i<LINHAATUAL && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
+        if(msg.comando+10 == TABELA[i][0] && (msg.sequencia == TABELA[i][1])){// || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
             TABELA[i][0]=VAZIO;
             TABELA[i][1]=VAZIO;
             TABELA[i][2]=VAZIO;
             if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
                 LINHAATUAL--;
+                #ifdef DEBUG
+                printf("\tLA--\t");
+                #endif
             }
             DISPONIVEL++;
-            POS[DISPONIVEL]=LINHAATUAL;  //guarda no vetor a posição disponivel
+            POS[DISPONIVEL]=i;  //guarda no vetor a posição disponivel
             encontrou=1;
-            printf("\tLIN: %d",LINHAATUAL);
-        }
+            #ifdef DEBUG
+            printf("\tPOSc:%d ",POS[DISPONIVEL]);
+            printf("LAc:%d\t",LINHAATUAL);
+            #endif
+        }/*else{
+            printf("\tNot Found %d,%d(i:%d)\t",msg.comando,msg.sequencia,i);
+        }*/
     }
+}
+
+void imprime_tabela(){
+  int i;
+  printf("TABELOSA\n");
+  for(i=0; i<LINHAATUAL;i++){
+    printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
+  }
 }
 
 void inicializa_pos(){  //inicia vetor com valor ao contrario dos indices
