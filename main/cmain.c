@@ -11,7 +11,7 @@
 #include "../headers/protocolo.h"
 #include "../headers/kbhit.h"
 
-//#define AUTO 1
+#define AUTO 1
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
@@ -106,9 +106,13 @@ int main(int argc, char *argv[]){
             #endif
         }else{ // mandar uma  nova mensagem
             bzero(buffer, BUFFER_SIZE);
-            //simula_comm(buffer);
+            #ifdef AUTO
+            simula_comm(buffer);
+            #endif
+            #ifndef AUTO
             fgets(buffer, BUFFER_SIZE, stdin);
             if (buffer[0]!='\n')buffer[strlen(buffer)-1]='\0';
+            #endif
             out=buffer[0];
             n = write(sockfd, buffer, strlen(buffer));
             
@@ -131,8 +135,8 @@ int main(int argc, char *argv[]){
             strcpy(msg,buffer);
             mensagem_recv = analisarComando(buffer, 0);
             //printf("\t%s\n", msg);
-            printf("sent:%d\trecv:%d\n",mensagem_send.comando,mensagem_recv.comando+10);
-            if((((mensagem_recv.comando) == mensagem_send.comando) && (mensagem_recv.sequencia == mensagem_send.sequencia)) || mensagem_recv.comando == C_S_ERRO){
+            //printf("sent:%d\trecv:%d\n",mensagem_send.comando,mensagem_recv.comando+10);
+            if((((mensagem_recv.comando+10) == mensagem_send.comando) && (mensagem_recv.sequencia == mensagem_send.sequencia)) || mensagem_recv.comando == C_S_ERRO){
                 printf("\tRECV: %s", msg);
                 flagAguardo = 0;
                 #ifndef AUTO
