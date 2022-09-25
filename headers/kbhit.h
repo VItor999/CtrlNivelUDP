@@ -13,6 +13,10 @@
 #include <fcntl.h>
 
 #ifndef kbhithead
+//===================== Cabeçalhos de Funções =====================//
+int kbhit(void);
+char teclado();
+
 /**
  * @brief Implementação do kbhit no UNIX
  * 
@@ -43,6 +47,20 @@ int kbhit(void)
   }
 
   return 0;
+}
+
+/**
+*@brief captura uma tecla qualquer, se o teclado for pressionado
+*
+*@return char retonar 'e' ou a tecla pressionada
+**/
+char teclado(){
+  char r ='e';
+  // bloco para captura de tecla
+  if (kbhit()){ // LINUX não tem um kbhit() como o windows -> ver arquivo kbhit.h
+    r = getchar();
+  } 
+  return r;
 }
 #define kbhithead
 #endif

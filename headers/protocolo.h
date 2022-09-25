@@ -84,7 +84,8 @@ typedef struct TPMENSAGEM
 
 TPMENSAGEM analisarComando(char *mensagem, int is_serv);
 void obterInfo(TPMENSAGEM *saida,TPMENSAGEM msg);
- 
+void error(const char *msg);
+
 //#################################################################//
 //########################   FUNÇÕES   ############################//
 //#################################################################//
@@ -277,5 +278,9 @@ void obterInfo(TPMENSAGEM *saida,TPMENSAGEM msg){
   	saida->comando =  msg.comando;
 }
 
+void error(const char *msg){
+    perror(msg);
+    exit(0);
+}
 #define protocolo
 #endif

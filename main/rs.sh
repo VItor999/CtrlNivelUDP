@@ -1,2 +1,2 @@
-gcc -pthread -o server stestethread.c
+gcc -pthread -o server -lrt stestethread.c
 ./server 20000

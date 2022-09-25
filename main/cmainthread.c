@@ -1,3 +1,6 @@
+
+//===================== Bibliotecas utilizadas =====================//
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,9 +14,13 @@
 #include "../headers/protocolo.h"
 #include "../headers/kbhit.h"
 
+//======================= Definições EXTRAS ========================//
 #define AUTO 1
 //#define RAND 1
 //#define DEBUG 1
+
+//====================== Definições efetuadas ======================//
+
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
@@ -22,18 +29,27 @@
 #define COL 3
 #define NUM_COMM 50
 
+//======================= Variáveis Globais  ======================//
+pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
+char OUT = ' ';
+TPMENSAGEM MENSAGEM;
+int isserver = 0;
 int TABELA[LIN][COL]={0};
 int POS[LIN];
 int DISPONIVEL = LIN-1;
-int LINHAATUAL = 0;
 
+//===================== Cabeçalhos de Funções =====================//
 
+void error(const char *msg);
 void simula_comm(char buffer[]);
 void guarda_comando(TPMENSAGEM msg);
 void confirma_comando(TPMENSAGEM msg);
-void inicializa_pos();
 void imprime_tabela();
 
+
+//#################################################################//
+//#########################    MAIN    ############################//
+//#################################################################//
 
 int main(int argc, char *argv[]){
     int sockfd, portno, n;
@@ -79,8 +95,6 @@ int main(int argc, char *argv[]){
         error("ERROR connecting");
     
     printf("Cliente inicializado, parabens\n");
-    
-    inicializa_pos();
     int CONT_IN = 0;
     int CONT_OUT = 0;
     while (teclado() != '\n' && out != '\n'){
@@ -156,9 +170,11 @@ int main(int argc, char *argv[]){
     imprime_tabela();
     return 0;
 }
+
+
 /**
-*@brief 
-*
+*@brief Verifica posição livre na tabela de comandos enviados. 
+* Retorna o indice da primeira posição livre encontrada
 *@return int 
 **/
 int verificaPosicao(){
@@ -171,21 +187,26 @@ int verificaPosicao(){
     return out;
 }
 
+/**
+*@brief Armazena uma mensagem enviada
+*
+*@param msg Mensagem enviada
+**/
 void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao confirmado
     int pos = verificaPosicao();
     if (pos!=-1){
         TABELA[pos][0]=msg.comando; //consulta vetor de posicoes disponiveis para guardar o comando
         TABELA[pos][1]=msg.sequencia;
         TABELA[pos][2]=msg.valor;
-       // LINHAATUAL++; // atualiza até onde devo procurar;
-        printf("\nL++");
     }
-    #ifdef DEBUG
-    printf("POSg:%d ",POS[DISPONIVEL]);
-    printf("LAg:%d\t",LINHAATUAL);
-    #endif
+    // TODO pensar o que fazer quando minha tabela estourou
 }
 
+/**
+*@brief Analisa a mesnsagem recebida de forma retira-lo da lista de comandos não confirmados
+*    
+*@param msg Mensagem de confirmação recebida
+**/
 void confirma_comando(TPMENSAGEM msg){
     int i, encontrou=0;
     for(i=0;(i<LIN && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
@@ -193,23 +214,17 @@ void confirma_comando(TPMENSAGEM msg){
             TABELA[i][0]=VAZIO;
             TABELA[i][1]=VAZIO;
             TABELA[i][2]=VAZIO;
-            //if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
-            //    LINHAATUAL--; // não preciso avançar na minha procura 
-            //    #ifdef DEBUG
-            //    printf("\tLA--\t");
-            //    #endif
-            //}
             encontrou=1;
-            #ifdef DEBUG
-            printf("\tPOSc:%d ",POS[DISPONIVEL]);
-            printf("LAc:%d\t",LINHAATUAL);
-            #endif
         }/*else{
             printf("\tNot Found %d,%d(i:%d)\t",msg.comando,msg.sequencia,i);
         }*/
     }
 }
 
+/**
+*@brief Imprime toda a tabela: Utilizado apenas para debug
+*
+**/
 void imprime_tabela(){
   int i;
   printf("TABELOSA\n");
@@ -218,13 +233,11 @@ void imprime_tabela(){
   }
 }
 
-void inicializa_pos(){  //inicia vetor com valor ao contrario dos indices
-    int i;
-    for(i=0;i<LIN;i++){
-        POS[i]=LIN-i-1;
-    }
-}
-
+/**
+*@brief Simula a comunicação
+*
+*@param buffer ponteiro/endereço para onde dever ser copiada a mensagem gerada
+**/
 void simula_comm(char buffer[]){
     char aux[TAM] = "\0";
     char STR_COMM1[19] = "OpenValve#";

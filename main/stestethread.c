@@ -26,7 +26,7 @@
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
-#define DELAY 700
+#define DELAY 10
 //======================= Variáveis Globais  ======================//
 
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
@@ -37,11 +37,11 @@ int NOVAMENSAGEM =0;
 int TABELA[LIN][COL]={0};
 int LINHAATUAL = 0;    		// linha atual da tabela
 int TABREINIC = 0;    /* Flag para indicar o reinicio do preenchimento da tabela*/
+
 //===================== Cabeçalhos de Funções =====================//
 
 char teclado();
 void *threadComm(void *port);
-void error(char *msg);
 void atualiza_tabela(TPMENSAGEM msg);
 int verifica_tabela(TPMENSAGEM msg);
 void simulador();
@@ -57,14 +57,22 @@ int main(int argc, char *argv[]){
   //               *argv = argumentos recebidos (OBS: 0 = chamada do program, 1 - n o resto)
   // Argumentos recebibos sempre em array de char (string)
   // Só preciso passar a porta no servidor
-  //---- Variáveis UDP
+  //---- Inicializações
   system("clear");
+  #ifdef DEBUG 
   srandom(time(NULL));
-  pthread_t pthComm;       
-  int r;
-  //---- Variáveis 
-  char out = '\0'; // tecla em que irei guardar a saida
+  #endif
+  //---- UDP
+  int porta;
 
+  //---- Threads 
+  pthread_t pthComm;       
+  
+  //---- Variáveis Auxiliares 
+  char out = '\0'; // tecla em que irei guardar a saida
+  int r;
+
+  //---- Verificação dos parametros 
   if (argc < 2 && argc!=3){  // chamada de programa + porta
     fprintf(stderr, "usage %s port isserver\n",argv[0]);
     exit(0);
@@ -73,24 +81,24 @@ int main(int argc, char *argv[]){
   }else{
     isserver = atoi(argv[2]);
   }
-  int porta = htons(atoi(argv[1]));
+  //---- Captura de dado relevante para o UDP
+  porta = htons(atoi(argv[1]));
+  //---- Cria e  Resta a trhed
   r = pthread_create(&pthComm, NULL, threadComm, (void *)&porta);
   if (r){
     fprintf(stderr, "Error - pthread_create() return code: %d\n",  r);
     exit(EXIT_FAILURE);
   }
+  // Notificação de sucesso
   if (isserver){
     printf("Servidor iniciado para teste do servidor, parabens\n");
   }else{
     printf("Servidor iniciado para teste do cliente, parabens\n");
   }
-
-
+  
+  //---- LOOP principal
   while (OUT != 27){ // pressionando esq encerro o server
-    // bloco para captura de tecla
-    //printf("Rodando MAIN ...\n");
-    //OUT =  teclado();
-    //waitms(999);
+    // Variavel OUT é caputara dela thread que está sempre operando -> COMM
     if (NOVAMENSAGEM && pthread_mutex_trylock(&mutexCOM)==0){
       //printf("\tCOM %d\tSEQ %d\tVAL %d",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
       simulador();
@@ -98,6 +106,7 @@ int main(int argc, char *argv[]){
       pthread_mutex_unlock(&mutexCOM);
     }
   }
+  //---- Encerrando
   pthread_join(pthComm, NULL);
   printf("Encerrando main\n\n");
   return 0;
@@ -108,6 +117,12 @@ int main(int argc, char *argv[]){
 //##################    Funções Auxiliares    #####################//
 //#################################################################//
 
+/**
+*@brief Thread que efetua a comunicação com o cliente, captura, interpreta  e envia uma mensagem
+*
+*@param port // porta onde está localizado o servidor
+*@return void* 
+**/
 void *threadComm(void *port){
   TPMENSAGEM mensagem;
   int sock, length, fromlen, n = -1;
@@ -219,6 +234,21 @@ void *threadComm(void *port){
   printf("\nEncerrando thread\n");
 }
 
+
+/**
+*@brief Futura Thread que devera conter o simulador
+*
+**/
+void simulador(){//simula simulador kkj
+  MENSAGEM.comando=0;
+}
+
+/**
+*@brief Função que gera uma resposta para o servidor ...
+*
+*@param msg 
+*@param ans 
+**/
 void responde_cliente(TPMENSAGEM msg, char ans[]){
   #define TAM 10
   char aux[TAM]="\0";
@@ -265,6 +295,11 @@ void responde_cliente(TPMENSAGEM msg, char ans[]){
   strcat(ans,ENDMSG);
 }
 
+/**
+*@brief Função que atualiza a tabela 
+* 
+*@param msg Mensagem para atualização
+**/
 void atualiza_tabela(TPMENSAGEM msg){
   TABELA[LINHAATUAL][0]=msg.comando;
   TABELA[LINHAATUAL][1]=msg.sequencia;
@@ -282,6 +317,12 @@ void atualiza_tabela(TPMENSAGEM msg){
   }
 }
 
+/**
+*@brief Verifica se o comando recebido já não está cadastrado na tabela
+*
+*@param msg 
+*@return int 
+**/
 int verifica_tabela(TPMENSAGEM msg){
   int i, flag_retorno = 0; //inicializa flag de retorno para o padrao sem "erro"
   //Verifica se alguma linha da tabela possui a mesma correspondencia
@@ -317,27 +358,11 @@ int verifica_tabela(TPMENSAGEM msg){
   return flag_retorno;
 }
 
-void simulador(){//simula simulador kkj
-  MENSAGEM.comando=0;
-}
+
 
 void imprime_tabela(){
   int i;
   for(i=0; i<LINHAATUAL;i++){
     printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
   }
-}
-
-void error(char *msg){ // método para imprimir um erro, só passar uma mensagem
-  perror(msg);
-  exit(0); // se colocar exit(1) ele não sai do programa
-}
-
-char teclado(){
-  char r ='e';
-  // bloco para captura de tecla
-  if (kbhit()){ // LINUX não tem um kbhit() como o windows -> ver arquivo kbhit.h
-    r = getchar();
-  } 
-  return r;
 }
