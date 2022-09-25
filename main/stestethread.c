@@ -26,7 +26,7 @@
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
-
+#define DELAY 700
 //======================= Variáveis Globais  ======================//
 
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
@@ -193,8 +193,8 @@ void *threadComm(void *port){
         }
         //responder o cliente 
         if (random()%9 != 0) {
-          if(random()%3 == 0){  
-            waitms(500);
+          if(random()%7 == 0){  
+            waitms(DELAY);
             printf("\tDELAY");
           }else{
             printf("\t");

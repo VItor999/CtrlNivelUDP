@@ -13,14 +13,14 @@
 
 #define AUTO 1
 //#define RAND 1
-#define DEBUG 1
+//#define DEBUG 1
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
 #define WAIT 80
-#define LIN 50  
+#define LIN 200  
 #define COL 3
-#define NUM_COMM 100
+#define NUM_COMM 50
 
 int TABELA[LIN][COL]={0};
 int POS[LIN];
@@ -157,16 +157,30 @@ int main(int argc, char *argv[]){
     imprime_tabela();
     return 0;
 }
+/**
+*@brief 
+*
+*@return int 
+**/
+int verificaPosicao(){
+    int i,out=-1;
+    for(i=0;i<LIN && out==-1 ;i++){
+        if(TABELA[i][0]==VAZIO || TABELA[i][0]== 0){
+            out=i;
+        }
+    }
+    return out;
+}
 
 void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao confirmado
-    TABELA[POS[DISPONIVEL]][0]=msg.comando; //consulta vetor de posicoes disponiveis para guardar o comando
-    TABELA[POS[DISPONIVEL]][1]=msg.sequencia;
-    TABELA[POS[DISPONIVEL]][2]=msg.valor;
-    if(POS[DISPONIVEL]==LINHAATUAL){ //acresce linhaatual se esta for a disponivel, do contrario mantem igual (pos até onde ja foi escrito)
-        LINHAATUAL++;
+    int pos = verificaPosicao();
+    if (pos!=-1){
+        TABELA[pos][0]=msg.comando; //consulta vetor de posicoes disponiveis para guardar o comando
+        TABELA[pos][1]=msg.sequencia;
+        TABELA[pos][2]=msg.valor;
+       // LINHAATUAL++; // atualiza até onde devo procurar;
+        printf("\nL++");
     }
-    POS[DISPONIVEL]=-1; //coloca valor invalido no vetor de posicoes para marcar
-    DISPONIVEL--;   //diminui o numero de posicoes disponiveis
     #ifdef DEBUG
     printf("POSg:%d ",POS[DISPONIVEL]);
     printf("LAg:%d\t",LINHAATUAL);
@@ -175,19 +189,17 @@ void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao conf
 
 void confirma_comando(TPMENSAGEM msg){
     int i, encontrou=0;
-    for(i=0;(i<LINHAATUAL && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
+    for(i=0;(i<LIN && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
         if(msg.comando+10 == TABELA[i][0] && (msg.sequencia == TABELA[i][1])){// || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
             TABELA[i][0]=VAZIO;
             TABELA[i][1]=VAZIO;
             TABELA[i][2]=VAZIO;
-            if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
-                LINHAATUAL--;
-                #ifdef DEBUG
-                printf("\tLA--\t");
-                #endif
-            }
-            DISPONIVEL++;
-            POS[DISPONIVEL]=i;  //guarda no vetor a posição disponivel
+            //if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
+            //    LINHAATUAL--; // não preciso avançar na minha procura 
+            //    #ifdef DEBUG
+            //    printf("\tLA--\t");
+            //    #endif
+            //}
             encontrou=1;
             #ifdef DEBUG
             printf("\tPOSc:%d ",POS[DISPONIVEL]);
@@ -202,7 +214,7 @@ void confirma_comando(TPMENSAGEM msg){
 void imprime_tabela(){
   int i;
   printf("TABELOSA\n");
-  for(i=0; i<LINHAATUAL;i++){
+  for(i=0; i<LIN;i++){
     printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
   }
 }
@@ -221,7 +233,15 @@ void error(const char *msg){
 
 void simula_comm(char buffer[]){
     char aux[TAM] = "\0";
-    char STR_COMM[19] = "OpenValve#";
+    char STR_COMM1[19] = "OpenValve#";
+    char STR_COMM2[20] = "CloseValve#";
+    char STR_COMM[20];
+    if (random()%2==0){
+        strcpy(STR_COMM,STR_COMM2);
+    }
+    else{
+        strcpy(STR_COMM,STR_COMM1);
+    }
     #ifdef RAND
     snprintf(aux, TAM, "%d", random()%1000);
     strcat(STR_COMM,aux);
