@@ -191,23 +191,23 @@ void *threadComm(void *port){
           responde_cliente(mensagem, retorno);
         }
         //responder o cliente 
-        //if (random()%9 != 0) {
-          /*if(random()%3 == 0){  
+        if (random()%9 != 0) {
+          if(random()%3 == 0){  
             waitms(100);
             printf("\tDELAY");
           }else{
             printf("\t");
-          }*/
+          }
           n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
           if (n < 0){
             error("Envio");
           }else{
             printf("\tSEND %s\n",retorno);
           }
-        /*}
+        }
         else{
           printf("\tPERDEU\n");
-        }*/
+        }
         bzero(retorno,RETURN_SIZE);
         flagNovaMsg = 0;
       }else{ //nao consegui mutex e preciso eventualmente me livrar da msg

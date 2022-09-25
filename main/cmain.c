@@ -12,6 +12,7 @@
 #include "../headers/kbhit.h"
 
 #define AUTO 1
+//#define RAND 1
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
@@ -33,7 +34,8 @@ void inicializa_pos();
 
 void imprime_tabela(){
   int i;
-  for(i=0; i<LINHAATUAL;i++){
+  printf("TABELOSA\n");
+  for(i=0; i<LINHAATUAL-1;i++){
     printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
   }
 }
@@ -85,7 +87,7 @@ int main(int argc, char *argv[]){
     printf("Cliente inicializado, parabens\n");
     
     inicializa_pos();
-    while (/*teclado() != '\n' &&*/ out != '\n'){
+    while (teclado() != '\n' && out != '\n'){
         //waitms(WAIT);
         if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
             //printf("Continuo rodando\n");
@@ -115,14 +117,13 @@ int main(int argc, char *argv[]){
             #endif
             out=buffer[0];
             n = write(sockfd, buffer, strlen(buffer));
-            
             if (n < 0 && n != -1){ //
                 error("ERROR writing to socket");
             }else{
                 mensagem_send = analisarComando(buffer, 1);
                 clock_gettime(clk_id,&start);
                 //printf("start: %lld\n", start.tv_nsec);
-                guarda_comando(mensagem_send);
+                guarda_comando(mensagem_send); // já escreve na tabela 
                 flagAguardo = 1;
             }
         }
@@ -146,7 +147,7 @@ int main(int argc, char *argv[]){
             /*else{
                 printf("\n");
             }*/
-            confirma_comando(mensagem_recv);
+            confirma_comando(mensagem_recv); //tambem escreve na tabela apagando se recebeu erro 
         }
     }
     n = write(sockfd, "\n", 1);
@@ -165,21 +166,23 @@ void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao conf
     }
     POS[DISPONIVEL]=-1; //coloca valor invalido no vetor de posicoes para marcar
     DISPONIVEL--;   //diminui o numero de posicoes disponiveis
+    printf("LA: %d\n",LINHAATUAL);
 }
 
 void confirma_comando(TPMENSAGEM msg){
     int i, encontrou=0;
     for(i=0;i<(LINHAATUAL && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
-        if(msg.comando == TABELA[i][0] && (msg.sequencia == TABELA[i][1] || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
-            TABELA[i][0]=0;
-            TABELA[i][1]=0;
-            TABELA[i][2]=0;
+        if(msg.comando +10 == TABELA[i][0] && (msg.sequencia == TABELA[i][1] || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
+            TABELA[i][0]=VAZIO;
+            TABELA[i][1]=VAZIO;
+            TABELA[i][2]=VAZIO;
             if(i==(LINHAATUAL-1)){ //se a linha zerada é anterior à atual retrocede essa
                 LINHAATUAL--;
             }
-            POS[DISPONIVEL]=i;  //guarda no vetor a posição disponivel
             DISPONIVEL++;
+            POS[DISPONIVEL]=LINHAATUAL;  //guarda no vetor a posição disponivel
             encontrou=1;
+            printf("\tLIN: %d",LINHAATUAL);
         }
     }
 }
@@ -199,7 +202,7 @@ void error(const char *msg){
 void simula_comm(char buffer[]){
     char aux[TAM] = "\0";
     char STR_COMM[19] = "OpenValve#";
-
+    #ifdef RAND
     snprintf(aux, TAM, "%d", random()%1000);
     strcat(STR_COMM,aux);
     strcat(STR_COMM,TK);
@@ -210,6 +213,18 @@ void simula_comm(char buffer[]){
     /*if(random()%11==0){
         waitms(999);
     }*/
+    #endif
+    #ifndef RAND
+    static int i = 1;
+    snprintf(aux, TAM, "%d",i);
+    strcat(STR_COMM,aux);
+    strcat(STR_COMM,TK);
+    bzero(aux,TAM);
+    snprintf(aux, TAM, "%d", i);
+    strcat(STR_COMM,aux);
+    strcat(STR_COMM,ENDMSG);
+    i++;
+    #endif
     printf("\n%s ",STR_COMM);
     strcpy(buffer,STR_COMM);
 }
