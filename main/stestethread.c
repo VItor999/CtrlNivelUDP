@@ -30,7 +30,7 @@
 //======================= Variáveis Globais  ======================//
 
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
-char OUT = ' ';
+char OUT = '\0';
 TPMENSAGEM MENSAGEM;
 int isserver = 0;
 int NOVAMENSAGEM =0;
@@ -69,7 +69,6 @@ int main(int argc, char *argv[]){
   pthread_t pthComm;       
   
   //---- Variáveis Auxiliares 
-  char out = '\0'; // tecla em que irei guardar a saida
   int r;
 
   //---- Verificação dos parametros 
@@ -83,7 +82,7 @@ int main(int argc, char *argv[]){
   }
   //---- Captura de dado relevante para o UDP
   porta = htons(atoi(argv[1]));
-  //---- Cria e  Resta a trhed
+  //---- Cria e  Testa a thread
   r = pthread_create(&pthComm, NULL, threadComm, (void *)&porta);
   if (r){
     fprintf(stderr, "Error - pthread_create() return code: %d\n",  r);
@@ -129,7 +128,6 @@ void *threadComm(void *port){
   struct sockaddr_in server;
   struct sockaddr_in from;
   char buffer[BUFFER_SIZE];
-  char out = ' '; 
   char retorno [RETURN_SIZE]="\0";
   int flagNovaMsg = 0;
   char msg[strlen(buffer)];
@@ -154,76 +152,61 @@ void *threadComm(void *port){
   
   while (OUT != 27){ // pressionando esq encerro o server
     OUT = teclado(); 
-    if(!flagNovaMsg){
+    if(!flagNovaMsg){ // só altero n se leio 
       n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
     }
     if (n < 0 && n != -1){
       error("Receber");
     }else if (n > 0){// captura de algo novo 
-      char *tk;
-      char *resto = buffer;
-      tk = strtok_r(resto, "\n", &resto);
-      #ifdef DEBUG
-      if (buffer[0]!='\n')printf("RECV %s", buffer);
-      #endif
-      strcpy(msg, buffer);
-      bzero(buffer, BUFFER_SIZE);
-      if (msg[0]=='\n'){ // desligar servidor 
-        OUT = 27;
+      if(!flagNovaMsg){
+        char *tk;
+        char *resto = buffer;
+        tk = strtok_r(resto, "\n", &resto);
+        #ifdef DEBUG
+        if (buffer[0]!='\n')printf("RECV %s", buffer);
+        #endif
+        strcpy(msg, buffer);
+        bzero(buffer, BUFFER_SIZE);
+        if (msg[0]=='\n'){ // desligar servidor 
+          OUT = 27;
+        }
       }
-      else if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
+      if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
         mensagem = analisarComando(msg,isserver);
         if(verifica_tabela(mensagem)==0){ // verifica se não é repetida
           obterInfo(&MENSAGEM,mensagem);  //Escreve pro mundo
           NOVAMENSAGEM = 1;  //notifica o mundo
           pthread_mutex_unlock(&mutexCOM); // libera o mutex
-
           while(MENSAGEM.comando != 0){ // fica travado esperando o simulador dizer que usou a info
             //printf("AGUARDANDO SIMULADOR\n");
           }
           atualiza_tabela(mensagem);
           //imprime_tabela();
           responde_cliente(mensagem, retorno);
-          /*if(mensagem.comando==C_S_ERRO){
-            retorno[strlen(retorno)-2]='-';
-            retorno[strlen(retorno)-1]='1';
-            retorno[strlen(retorno)]='\0';
-          }else if (mensagem.comando<10){
-            retorno[strlen(retorno)-2]=' ';
-            retorno[strlen(retorno)-1]=mensagem.comando+48;
-            retorno[strlen(retorno)]='\0';
-          }else{
-            retorno[strlen(retorno)-2]=mensagem.comando/10+48;
-            retorno[strlen(retorno)-1]=mensagem.comando%10+48;
-            retorno[strlen(retorno)]='\0';
-          }*/
         }else{ //caso msg repetida
           pthread_mutex_unlock(&mutexCOM);
-          //bzero(buffer, BUFFER_SIZE);
-          /*retorno[strlen(retorno)-2]='-';
-          retorno[strlen(retorno)-1]='1';
-          retorno[strlen(retorno)]='\0';*/
           mensagem.comando=C_S_ERRO;
           responde_cliente(mensagem, retorno);
         }
         //responder o cliente 
-        if (random()%9 != 0) {
+        /*if (random()%9 != 0) {
           if(random()%7 == 0){  
             waitms(DELAY);
             printf("\tDELAY");
           }else{
             printf("\t");
-          }
+          }*/
+          // altero n com um envio 
           n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
           if (n < 0){
             error("Envio");
           }else{
             printf("\tSEND %s\n",retorno);
           }
-        }
+        /*}
         else{
           printf("\tPERDEU\n");
-        }
+        }*/
         bzero(retorno,RETURN_SIZE);
         flagNovaMsg = 0;
       }else{ //nao consegui mutex e preciso eventualmente me livrar da msg
@@ -359,7 +342,10 @@ int verifica_tabela(TPMENSAGEM msg){
 }
 
 
-
+/**
+*@brief Imprime a tabela, somente para debug.
+*
+**/
 void imprime_tabela(){
   int i;
   for(i=0; i<LINHAATUAL;i++){

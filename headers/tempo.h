@@ -28,7 +28,6 @@
 *
 *@param twaitms  TTempo de espera em milisegundos
 **/
-
 void waitms(int twaitms)
 {
     long int deltaT =  0;
@@ -68,5 +67,24 @@ void waitms(int twaitms)
     printf("atual.tv_nsec: %ld\n", atual.tv_nsec);
     #endif
 }
+
+int deltaTempo(int timeOut,struct timespec start){
+    long int deltaT = 0;
+    struct timespec atual;
+    int retorno =0;
+    clockid_t clk_id = CLOCK_MONOTONIC_RAW;
+    clock_gettime(clk_id,&atual);
+    if((atual.tv_sec-start.tv_sec)>0) {
+        deltaT =(atual.tv_nsec/1000)+1000000-start.tv_nsec/1000;
+    }
+    else {
+        deltaT =(atual.tv_nsec/1000)-start.tv_nsec/1000;
+    }
+    if (deltaT >= timeOut*1000){
+        retorno = 1;
+    }
+    return retorno;
+}
+
 #define temporizacao
 #endif
