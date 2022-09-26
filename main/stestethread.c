@@ -21,12 +21,14 @@
 //====================== Definições efetuadas ======================//
 
 #define DEBUG 1 
+#define TEMPESTADE 1
+#define TROVOADAS 1
 #define LIN 40  
 #define COL 3
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
-#define DELAY 10
+#define DELAY 700
 //======================= Variáveis Globais  ======================//
 
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
@@ -148,9 +150,10 @@ void *threadComm(void *port){
     error("binding");
   }
   fromlen = sizeof(struct sockaddr_in);
+  msg[0]='\0';
   printf("Servico de comunicação iniciado em thread\n");
-  
-  while (OUT != 27){ // pressionando esq encerro o server
+
+  while (OUT != 27 && msg[0]!='\n'){ // pressionando esq encerro o server
     OUT = teclado(); 
     if(!flagNovaMsg){ // só altero n se leio 
       n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
@@ -167,9 +170,9 @@ void *threadComm(void *port){
         #endif
         strcpy(msg, buffer);
         bzero(buffer, BUFFER_SIZE);
-        if (msg[0]=='\n'){ // desligar servidor 
-          OUT = 27;
-        }
+        //if (msg[0]=='\n'){ // desligar servidor 
+        //  OUT = 27;
+        //}
       }
       if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
         mensagem = analisarComando(msg,isserver);
@@ -189,13 +192,17 @@ void *threadComm(void *port){
           responde_cliente(mensagem, retorno);
         }
         //responder o cliente 
-        /*if (random()%9 != 0) {
+        #ifdef TEMPESTADE
+        if (random()%9 != 0) {
+        #endif
+          #ifdef TROVOADAS
           if(random()%7 == 0){  
             waitms(DELAY);
             printf("\tDELAY");
           }else{
             printf("\t");
-          }*/
+          }
+          #endif
           // altero n com um envio 
           n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
           if (n < 0){
@@ -203,10 +210,12 @@ void *threadComm(void *port){
           }else{
             printf("\tSEND %s\n",retorno);
           }
-        /*}
+        #ifdef TEMPESTADE
+        }
         else{
           printf("\tPERDEU\n");
-        }*/
+        }
+        #endif
         bzero(retorno,RETURN_SIZE);
         flagNovaMsg = 0;
       }else{ //nao consegui mutex e preciso eventualmente me livrar da msg
@@ -214,6 +223,7 @@ void *threadComm(void *port){
       }
     }
   }
+  OUT = 27;
   printf("\nEncerrando thread\n");
 }
 

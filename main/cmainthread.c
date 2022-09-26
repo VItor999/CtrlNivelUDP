@@ -16,18 +16,17 @@
 
 //======================= Definições EXTRAS ========================//
 #define AUTO 1
-//#define RAND 1
-//#define DEBUG 1
+#define RAND 1
+#define DEBUG 1
 
 //====================== Definições efetuadas ======================//
 
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
-#define WAIT 80
-#define LIN 200  
+#define NUM_COMM 100
+#define LIN 2*NUM_COMM  
 #define COL 3
-#define NUM_COMM 50
 
 //======================= Variáveis Globais  ======================//
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
@@ -66,7 +65,7 @@ typedef struct PCLIENTE
 
 void *threadComm(void *pcli){
 
-    int sockfd, portno, n;
+    int sockfd, portno, rEnvio,rSend;
     struct sockaddr_in serv_addr;
     char  *chars;
     struct timespec start;
@@ -75,9 +74,11 @@ void *threadComm(void *pcli){
     clockid_t clk_id = CLOCK_MONOTONIC_RAW;
     char buffer[BUFFER_SIZE];
     char msg[BUFFER_SIZE];
-    int flagAguardo = 0;
-    int flagLeitura = 0;
-    int flagEscrita = 0;
+    int esperandoResposta = 0;
+    int leituraDisponivel = 0;
+    int CONT_IN = 0;
+    int CONT_OUT = 0;
+    int confirma = 0;
     TPMENSAGEM mensagem_send, mensagem_recv;
     portno = ((PCLIENTE *)pcli)->porta;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -102,101 +103,101 @@ void *threadComm(void *pcli){
         error("ERROR connecting");
     }
     printf("Servico de comunicação iniciado em thread\n");
-    int CONT_IN = 0;
-    int CONT_OUT = 0;
-    while (OUT!=27){
+    while (OUT!=27 && OUT!='\n'){
         //waitms(WAIT);
         OUT = teclado(); 
-        // Tentar escrever
+        // Tentar escrever/ ENVIO
         if(NOVAESCRITA 
-            && CONT_OUT<=NUM_COMM-1
             && pthread_mutex_trylock(&mutexCOM)==0 
-            && !flagAguardo){
-                bzero(buffer, BUFFER_SIZE);
-                #ifdef AUTO
-                strcpy(buffer,BUFFER);
-                //simula_comm(buffer);
-                #endif
-                n = write(sockfd, buffer, strlen(buffer));
-                if (n < 0 && n != -1){ //
-                    error("ERROR writing to socket");
-                }else{
-                    printf("buffer %s",buffer);
-                    mensagem_send = analisarComando(buffer, 1);
-                    clock_gettime(clk_id,&start);
-                    //printf("start: %lld\n", start.tv_nsec);
+            && !esperandoResposta){
+            bzero(buffer, BUFFER_SIZE);
+            strcpy(buffer,BUFFER);
+            rEnvio = write(sockfd, buffer, strlen(buffer));
+            if (rEnvio < 0 && rEnvio != -1){ //
+                error("ERROR writing to socket");
+            }else{
+                mensagem_send = analisarComando(buffer, 1);
+                clock_gettime(clk_id,&start);
+                #ifdef DEBUG
+                printf("start: %lld\n", start.tv_nsec);
+                #endif       
+                if(mensagem_send.comando == C_S_CLOSE || mensagem_send.comando == C_S_OPEN){
                     guarda_comando(mensagem_send); // já escreve na tabela 
-                    flagAguardo = 1;
-                    CONT_OUT++;
-                    NOVAESCRITA = 0;
                 }
-                pthread_mutex_unlock(&mutexCOM);
+                esperandoResposta = 1;
+                //CONT_OUT++;
+                //NOVAESCRITA = 0;
+            }
+            pthread_mutex_unlock(&mutexCOM);
+            printf("Saiu de nova escrita \n");
         }
-        if (flagAguardo){ // estaria aguardando receber a resposta para continuar com uma nova escrita
+        else if (esperandoResposta){ // estaria aguardando receber a resposta para continuar com uma nova escrita
         // dou time out 
             //printf("Continuo rodando\n");
             //printf(".");
             #ifdef AUTO
             if (deltaTempo(TIMEOUT,start)){
-                flagAguardo = 0;
-                
-                printf("LOST");
+                esperandoResposta = 0;
+                #ifdef DEBUG
+                printf("LOST COM %d VAL%d SEQ%d\n",mensagem_send.comando,mensagem_send.valor,mensagem_send.sequencia);
                 //perdido = 1;
-            }
-            if(!flagAguardo){
-              //SOMENTE EM TIME OUT
-              while(pthread_mutex_trylock(&mutexCOM)!=0); //enquento não pega fica parado
-              //se deu bom 
-              NOVAESCRITA = 0;
-              pthread_mutex_unlock(&mutexCOM);
+                #endif      //SOMENTE EM TIME OUT
+                while(pthread_mutex_trylock(&mutexCOM)==0);
+                //enquento não pega fica parado
+                //se deu bom 
+                NOVAESCRITA = 0;
+                //CONT_OUT++;
+                pthread_mutex_unlock(&mutexCOM);
             }
             #endif
         }
-        if(!flagLeitura){
+        //FAZER SEMPRE A LEITURA 
+        if(!leituraDisponivel){//} && !esperandoResposta){
             //LEITURA OK +- se pegar mutex
-            bzero(buffer, BUFFER_SIZE);
-            n = read(sockfd, buffer, BUFFER_SIZE-1); // tentar obter uma nova mensagem
+            bzero(buffer, BUFFER_SIZE); //leia
+            rSend = read(sockfd, buffer, BUFFER_SIZE-1); // tentar obter uma nova mensagem
         }
-        if (n < 0 && n != -1) // -1 quando não existe nada para ser lido
+        if (rSend < 0 && rSend != -1) // -1 quando não existe nada para ser lido
             error("ERROR reading from socket");
-        else if (n > 0){ //NOVA MENSAGEM CAPTURADA
-            strcpy(msg,buffer); // se de guru vamos colocar o if !flagleitura aqui
-            if (msg[0]=='\n'){ // desligar servidor 
-              OUT = 27;
+        else if (rSend > 0){ //NOVA MENSAGEM CAPTURADA
+            if (!leituraDisponivel){ //primeira vez que tenterei pegar o mutex
+                strcpy(msg,buffer); 
+                if (msg[0]=='\n'){ // desligar servidor 
+                    OUT = 27;
+                }
             }
-            else if (pthread_mutex_trylock(&mutexCOM)==0){ // peguei o mutex 
+            if (pthread_mutex_trylock(&mutexCOM)==0){ // peguei o mutex 
                 mensagem_recv = analisarComando(msg, 0);
-                if (confirma_comando(mensagem_recv)){
+                if(mensagem_recv.comando == C_C_CLOSE || mensagem_recv.comando == C_C_OPEN){
+                    confirma = confirma_comando(mensagem_recv);
+                }else{
+                    confirma = 1;
+                }    
+                if (confirma){
                     obterInfo(&MENSAGEM,mensagem_recv); // se é algo valido mando pro mundo
                     NOVALEITURA = 1;  //notifica o mundo
                     if((((mensagem_recv.comando+10) == mensagem_send.comando) 
                         && (mensagem_recv.sequencia == mensagem_send.sequencia)) 
                         || mensagem_recv.comando == C_S_ERRO){
                         //printf("\tRECV: %s", msg);
-                        flagAguardo = 0;
+                        esperandoResposta = 0;
                         #ifndef AUTO
                         printf("\n");
                         #endif
-                        
                     }   
                 }
-                flagLeitura = 0;
+                NOVAESCRITA = 0;
+                //CONT_OUT++;
+                leituraDisponivel = 0;
                 pthread_mutex_unlock(&mutexCOM); // libera o mutex
             }
             else{
-                flagLeitura =1;
-            }
-           
-            //printf("\t%s\n", msg);
-            //printf("sent:%d\trecv:%d\n",mensagem_send.comando,mensagem_recv.comando+10);
-           
-            /*else{
-                printf("\n");
-            }*/
-            
+                leituraDisponivel =1;
+            }            
         }
     }
-    n = write(sockfd, "\n", 1);
+    OUT = 27;
+    rSend = write(sockfd, "\n", 1);
     close(sockfd);
     printf("\n\nEncerrando threadCOM\n\n");
     return 0;
@@ -217,6 +218,7 @@ int main(int argc, char *argv[]){
  
      //---- Variáveis Auxiliares 
     int r;
+    int CONT_OUT=0;
 
      //---- Verificação dos parametros 
     if (argc < 3)
@@ -245,13 +247,19 @@ int main(int argc, char *argv[]){
     while (OUT != 27){ // pressionando esq encerro o server
         // Variavel OUT é caputara dela thread que está sempre operando -> COMM
         if (!NOVAESCRITA && pthread_mutex_trylock(&mutexCOM)==0){
-            simula_comm(BUFFER); //escreve no buffer global para enviar
-            NOVAESCRITA = 1;
+            if(CONT_OUT==NUM_COMM){
+                NOVAESCRITA = 0;
+            }else{
+                simula_comm(BUFFER); //escreve no buffer global para enviar
+                NOVAESCRITA = 1;
+                CONT_OUT++;
+            }
             pthread_mutex_unlock(&mutexCOM);
         }
         if (NOVALEITURA && pthread_mutex_trylock(&mutexCOM)==0){
-        //printf("\tCOM %d\tSEQ %d\tVAL %d",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+            #ifdef DEBUG
             printf("\tCOM %d\tSEQ %d\tVAL %d\n",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+            #endif
             NOVALEITURA = 0;
             pthread_mutex_unlock(&mutexCOM);
         }
@@ -260,7 +268,9 @@ int main(int argc, char *argv[]){
     //---- Encerrando
     pthread_join(pthComm, NULL);
     printf("Encerrando main\n\n");
+    #ifdef DEBUG
     imprime_tabela();
+    #endif
     return 0;
 }
 
@@ -367,6 +377,8 @@ void simula_comm(char buffer[]){
     strcat(STR_COMM,ENDMSG);
     i++;
     #endif
+    #ifdef DEBUG
     printf("\n%s ",STR_COMM);
+    #endif
     strcpy(buffer,STR_COMM);
 }
