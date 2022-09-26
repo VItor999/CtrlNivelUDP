@@ -16,7 +16,7 @@
 
 //======================= Definições EXTRAS ========================//
 #define AUTO 1
-#define RAND 1
+//#define RAND 1
 #define DEBUG 1
 
 //====================== Definições efetuadas ======================//
@@ -24,7 +24,7 @@
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
-#define NUM_COMM 100
+#define NUM_COMM 40
 #define LIN 2*NUM_COMM  
 #define COL 3
 
@@ -39,6 +39,9 @@ int DISPONIVEL = LIN-1;
 int NOVALEITURA = 0;
 int NOVAESCRITA = 0;
 char BUFFER[BUFFER_SIZE]={0};
+#ifdef DEBUG
+int CONTRUIM = 0;
+#endif 
 //===================== Cabeçalhos de Funções =====================//
 
 void error(const char *msg);
@@ -117,10 +120,7 @@ void *threadComm(void *pcli){
                 error("ERROR writing to socket");
             }else{
                 mensagem_send = analisarComando(buffer, 1);
-                clock_gettime(clk_id,&start);
-                #ifdef DEBUG
-                printf("start: %lld\n", start.tv_nsec);
-                #endif       
+                clock_gettime(clk_id,&start);     
                 if(mensagem_send.comando == C_S_CLOSE || mensagem_send.comando == C_S_OPEN){
                     guarda_comando(mensagem_send); // já escreve na tabela 
                 }
@@ -129,7 +129,6 @@ void *threadComm(void *pcli){
                 //NOVAESCRITA = 0;
             }
             pthread_mutex_unlock(&mutexCOM);
-            printf("Saiu de nova escrita \n");
         }
         else if (esperandoResposta){ // estaria aguardando receber a resposta para continuar com uma nova escrita
         // dou time out 
@@ -138,10 +137,6 @@ void *threadComm(void *pcli){
             #ifdef AUTO
             if (deltaTempo(TIMEOUT,start)){
                 esperandoResposta = 0;
-                #ifdef DEBUG
-                printf("LOST COM %d VAL%d SEQ%d\n",mensagem_send.comando,mensagem_send.valor,mensagem_send.sequencia);
-                //perdido = 1;
-                #endif      //SOMENTE EM TIME OUT
                 while(pthread_mutex_trylock(&mutexCOM)==0);
                 //enquento não pega fica parado
                 //se deu bom 
@@ -270,6 +265,7 @@ int main(int argc, char *argv[]){
     printf("Encerrando main\n\n");
     #ifdef DEBUG
     imprime_tabela();
+    printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
     #endif
     return 0;
 }
@@ -333,8 +329,11 @@ int confirma_comando(TPMENSAGEM msg){
 void imprime_tabela(){
   int i;
   printf("TABELOSA\n");
-  for(i=0; i<LIN;i++){
-    printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
+  for(i=0; i<LIN && TABELA[i][0] !=0 ;i++){
+    if (TABELA[i][0] != VAZIO){
+        CONTRUIM++;
+        printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
+    }
   }
 }
 
@@ -345,40 +344,49 @@ void imprime_tabela(){
 **/
 void simula_comm(char buffer[]){
     char aux[TAM] = "\0";
+    char STR_COMM0[20] = "GetLevel!";
     char STR_COMM1[19] = "OpenValve#";
     char STR_COMM2[20] = "CloseValve#";
+   
     char STR_COMM[20];
-    if (random()%2==0){
-        strcpy(STR_COMM,STR_COMM2);
+    int resto = random()%3;
+    if (resto==0){
+        strcpy(STR_COMM,STR_COMM0);
     }
     else{
-        strcpy(STR_COMM,STR_COMM1);
+        if(resto==1){
+            strcpy(STR_COMM,STR_COMM1);
+        }
+        else {
+            strcpy(STR_COMM,STR_COMM2);
+        }
+        #ifdef RAND
+        snprintf(aux, TAM, "%d", random()%1000);
+        strcat(STR_COMM,aux);
+        strcat(STR_COMM,TK);
+        bzero(aux,TAM);
+        snprintf(aux, TAM, "%d", random()%100);
+        strcat(STR_COMM,aux);
+        strcat(STR_COMM,ENDMSG);
+        /*if(random()%11==0){
+            waitms(999);
+        }*/
+        #endif
+        #ifndef RAND
+        static int i = 1;
+        snprintf(aux, TAM, "%d",i);
+        strcat(STR_COMM,aux);
+        strcat(STR_COMM,TK);
+        bzero(aux,TAM);
+        snprintf(aux, TAM, "%d", i);
+        strcat(STR_COMM,aux);
+        strcat(STR_COMM,ENDMSG);
+        i++;
+        #endif
+        
     }
-    #ifdef RAND
-    snprintf(aux, TAM, "%d", random()%1000);
-    strcat(STR_COMM,aux);
-    strcat(STR_COMM,TK);
-    bzero(aux,TAM);
-    snprintf(aux, TAM, "%d", random()%100);
-    strcat(STR_COMM,aux);
-    strcat(STR_COMM,ENDMSG);
-    /*if(random()%11==0){
-        waitms(999);
-    }*/
-    #endif
-    #ifndef RAND
-    static int i = 1;
-    snprintf(aux, TAM, "%d",i);
-    strcat(STR_COMM,aux);
-    strcat(STR_COMM,TK);
-    bzero(aux,TAM);
-    snprintf(aux, TAM, "%d", i);
-    strcat(STR_COMM,aux);
-    strcat(STR_COMM,ENDMSG);
-    i++;
-    #endif
     #ifdef DEBUG
-    printf("\n%s ",STR_COMM);
+        printf("\n%s ",STR_COMM);
     #endif
     strcpy(buffer,STR_COMM);
 }

@@ -39,6 +39,9 @@ int NOVAMENSAGEM =0;
 int TABELA[LIN][COL]={0};
 int LINHAATUAL = 0;    		// linha atual da tabela
 int TABREINIC = 0;    /* Flag para indicar o reinicio do preenchimento da tabela*/
+#ifdef DEBUG
+int CONTRUIM =0 ;
+#endif
 
 //===================== Cabeçalhos de Funções =====================//
 
@@ -109,6 +112,7 @@ int main(int argc, char *argv[]){
   }
   //---- Encerrando
   pthread_join(pthComm, NULL);
+  printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
   printf("Encerrando main\n\n");
   return 0;
 }
@@ -133,7 +137,7 @@ void *threadComm(void *port){
   char retorno [RETURN_SIZE]="\0";
   int flagNovaMsg = 0;
   char msg[strlen(buffer)];
-
+  int confirma = 0;
   sock = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_STREAM -> TCP/IP tempo de break é o zero poderiamos tentar alterar para outro blg 1 ms??
   // Esse bagulho não bloquei, minima ideia de como opera dar uma pesquisada em como usar o rev
   fcntl(sock, F_SETFL, O_NONBLOCK);
@@ -176,17 +180,27 @@ void *threadComm(void *port){
       }
       if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
         mensagem = analisarComando(msg,isserver);
-        if(verifica_tabela(mensagem)==0){ // verifica se não é repetida
+        if(mensagem.comando == C_C_CLOSE || mensagem.comando == C_C_OPEN){
+          confirma = verifica_tabela(mensagem);
+        }else{
+          confirma = 1;
+        }
+        if(confirma){ // verifica se não é repetida
           obterInfo(&MENSAGEM,mensagem);  //Escreve pro mundo
           NOVAMENSAGEM = 1;  //notifica o mundo
           pthread_mutex_unlock(&mutexCOM); // libera o mutex
           while(MENSAGEM.comando != 0){ // fica travado esperando o simulador dizer que usou a info
             //printf("AGUARDANDO SIMULADOR\n");
           }
-          atualiza_tabela(mensagem);
+          if(mensagem.comando == C_C_CLOSE || mensagem.comando == C_C_OPEN){
+            atualiza_tabela(mensagem);
+          }
           //imprime_tabela();
           responde_cliente(mensagem, retorno);
         }else{ //caso msg repetida
+          #ifdef DEBUG
+          CONTRUIM ++;
+          #endif
           pthread_mutex_unlock(&mutexCOM);
           mensagem.comando=C_S_ERRO;
           responde_cliente(mensagem, retorno);
@@ -213,7 +227,11 @@ void *threadComm(void *port){
         #ifdef TEMPESTADE
         }
         else{
+          #ifdef DEBUG
+          CONTRUIM ++;
+          #endif
           printf("\tPERDEU\n");
+
         }
         #endif
         bzero(retorno,RETURN_SIZE);
