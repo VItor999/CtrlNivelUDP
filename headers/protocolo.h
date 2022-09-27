@@ -43,7 +43,7 @@
 
 //-------- Equivlencia numérica dos comandos do cliente -----------//
 
-#define C_C_START 7			/** Equivalente numérico da string C_START		**/
+#define C_C_START 7				/** Equivalente numérico da string C_START		**/
 #define C_C_COM 1 				/** Equivalente numérico da string C_COMTEST	**/
 #define C_C_SET 3 				/** Equivalente numérico da string C_SETMAX		**/
 #define C_C_GET 4 				/** Equivalente numérico da string C_GETLV		**/

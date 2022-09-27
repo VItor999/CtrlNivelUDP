@@ -5,6 +5,7 @@
         "string.h": "c",
         "fcntl.h": "c",
         "kbhit.h": "c",
-        "protocolo.h": "c"
+        "protocolo.h": "c",
+        "math.h": "c"
     }
 }

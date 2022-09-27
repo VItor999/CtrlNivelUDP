@@ -137,7 +137,7 @@ void *threadComm(void *pcli){
             #ifdef AUTO
             if (deltaTempo(TIMEOUT,start)){
                 esperandoResposta = 0;
-                while(pthread_mutex_trylock(&mutexCOM)==0);
+                while(pthread_mutex_trylock(&mutexCOM)==0); //REVISAR ISSO ......
                 //enquento não pega fica parado
                 //se deu bom 
                 NOVAESCRITA = 0;
