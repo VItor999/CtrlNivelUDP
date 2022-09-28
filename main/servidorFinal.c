@@ -32,7 +32,7 @@
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
 #define DELAY 700
-#define TGRAPH  50 //ms
+#define TGRAPH  1000 //ms
 
 
 //======================= Variáveis Globais  ======================//
@@ -141,28 +141,30 @@ int main(int argc, char *argv[]){
   while (OUT != 27){ // pressionando esq encerro o server PRECISO DAR JEITO DE FAZER A TEMPORIZACAO
     // Variavel OUT é caputara dela thread que está sempre operando -> COMM
     attPlanta = deltaTempo(TPLANTA,clkPlanta);
-    attGraphTime = deltaTempo(TPLANTA,clkGraph);
+    attGraphTime = deltaTempo(TGRAPH,clkGraph);
     if (NOVAMENSAGEM && pthread_mutex_trylock(&mutexCOM)==0){
       comando = MENSAGEM.comando;
       printf("\tCOM %d\tSEQ %d\tVAL %d",comando,MENSAGEM.sequencia,MENSAGEM.valor);
       if (comando == C_S_CLOSE || comando == C_S_OPEN ||
           comando == C_S_SET   || comando == C_S_START){
-            pthread_mutex_lock(&mutexGRAPH);
-            if(attPlanta){
-              atualizarPlanta(MENSAGEM,&PLANTASIM,PARAMCICLO);
-              attPlanta = 0; // desliga a atualização da planta
-              clock_gettime(clk_id,&clkPlanta);
-            }
-            else {
-              atualizarPlanta(MENSAGEM,&PLANTASIM,PARAM);
-            }
-            if(MENSAGEM.comando == C_S_START){
-              INICIARGRAPH = 1;
-              PLANTAATIVA = 1;
-              printf("(Re)Iniciando Processo\n");
-            }
-            pthread_mutex_unlock(&mutexGRAPH);
-          }
+        pthread_mutex_lock(&mutexGRAPH);
+        if(attPlanta){
+          atualizarPlanta(MENSAGEM,&PLANTASIM,PARAMCICLO);
+          attPlanta = 0; // desliga a atualização da planta
+          clock_gettime(clk_id,&clkPlanta);
+          printf("gol do brasil\n");
+        }
+        else {
+          atualizarPlanta(MENSAGEM,&PLANTASIM,PARAM);
+          printf("gol vai neymar\n");
+        }
+        if(MENSAGEM.comando == C_S_START){
+          INICIARGRAPH = 1;
+          PLANTAATIVA = 1;
+          printf("(Re)Iniciando Processo\n");
+        }
+        pthread_mutex_unlock(&mutexGRAPH);
+      }
       simulador(); // NÂO COMENTAR ESSA BAGAÇA PQ TEM UM MANDRAKE LÁ NO MEIO DO THREAD COM QUE NÂO FOI CORRIGIDO
       NOVAMENSAGEM = 0;
       pthread_mutex_unlock(&mutexCOM);
@@ -175,8 +177,7 @@ int main(int argc, char *argv[]){
       pthread_mutex_unlock(&mutexGRAPH);
     }
 
-    if (attGraphTime && PLANTAATIVA)
-    {
+    if (attGraphTime && PLANTAATIVA){
       pthread_mutex_lock(&mutexGRAPH);
       ATTGRAPH =1; // aqui não importa o conteudo da msg
       attGraphTime = 0;
@@ -335,8 +336,7 @@ void* threadGraph(void* args)
     Tdataholder *data;
     data = datainit(1000,500,150,120,(double)LVINIC,(double)0,(double)0);
     #endif
-    while(pthread_mutex_trylock(&mutexGRAPH)==0){
-    } 
+    pthread_mutex_lock(&mutexGRAPH); 
     #ifdef GRAPH
     datadraw(data,(double)PLANTASIM.tempo/1000.0,(double)PLANTASIM.nivel*100,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
     #endif
@@ -344,7 +344,7 @@ void* threadGraph(void* args)
     printf("Thread Gráfica Iniciada\n");
     while(OUT != 27){
       if(INICIARGRAPH){  // se não comecei -> o importante é ver se tenho que começar
-        if(pthread_mutex_trylock(&mutexGRAPH)){
+        if(pthread_mutex_trylock(&mutexGRAPH)==0){
           INICIARGRAPH = 0;
         // botar o limpar grafico e inicio aqui
           pthread_mutex_unlock(&mutexGRAPH);
@@ -357,7 +357,7 @@ void* threadGraph(void* args)
             datadraw(data,(double)PLANTASIM.tempo/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
             #endif
             #ifndef GRAPH
-            printf("Atualizou:\t %3ld \t %3d \t%3d \t%3d\n",PLANTASIM.tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
+            printf("Atualizou:\t %6ld \t %3d \t%3.3f \t%3.3f\n",PLANTASIM.tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
             #endif
             ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);

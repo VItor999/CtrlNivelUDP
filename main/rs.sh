@@ -1,2 +1,2 @@
-gcc -pthread -o server -lrt stestethread.c
+gcc -o server -pthread -lm -lrt servidorFinal.c #-lSDL para colocar graficos mesmo
 ./server 20000

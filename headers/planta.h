@@ -13,7 +13,7 @@
 #define INANGL 50
 #define REF 80
 #define TPLANTA 10 //ms
-
+#define MAXINIC 80
 typedef struct TPPLANTA
 {
     long int tempo; /*Tempo em segundos*/
@@ -38,13 +38,12 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
  
     static float influx = 0;     // inicia com a valvula Aberta em 50%
     static float outflux = 0; 
-    static int MAX = 80;       // setar isso como ??
     static float delta = 0;     // inteiro o -100
     static float inAngle = INANGL;         //0-100
     static float level = ((float)LVINIC)/100.0;
     long int dT = TPLANTA;// passo do processo em ms;
     static long int T= 0;
-    if(opc == CICLO || opc == PARAMCICLO){ // só atualiza
+    if(opc == PARAM || opc == PARAMCICLO){ // só atualiza
         if (msg.comando == C_S_OPEN) //open
         {
             delta += msg.valor;
@@ -55,21 +54,21 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
         }
         if (msg.comando == C_S_SET)
         {
-           PLANTA -> max = msg.valor; // valor de 0-100
+           PLANTA->max = msg.valor; // valor de 0-100
+           printf("QUEM È O MAX %d",PLANTA->max);
         }
         if(msg.comando == C_S_START){
             influx = 0;     // inicia com a valvula Aberta em 50%
             outflux = 0; 
-            MAX = 80;       // setar isso como ??
             delta = 0;     // inteiro o -100
             inAngle = INANGL;         //0-100
             level = ((float)LVINIC)/100.0;
             dT = TPLANTA;// passo do processo em ms;
             T= 0;
             level = ((float)LVINIC)/100.0;
-            PLANTA->max = MAX;
-            PLANTA->angIN  = (float)INANGL;
-            PLANTA->nivel = (float)LVINIC;     
+            PLANTA->max = MAXINIC;
+            PLANTA->angIN  = (float)inAngle;
+            PLANTA->nivel = (int)level;     
             printf("ZERADITO");      
         }
     }
@@ -103,19 +102,18 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
         T= T+TPLANTA;
         influx = 1 * sin(M_PI / 2 * inAngle / 100);
         outflux = (((float)PLANTA->max) / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * outAngle(T) / 100);
-    
         level = level + 0.00002 * dT * (influx - outflux);
 
         if (level <0){
             level = 0;
         }
-        else if(level >100){
-        level=100;
+        else if(level >1){
+            level=1;
         }
     }
     PLANTA->nivel = (int)(level*100);
-    PLANTA->angIN = (int)inAngle;
-    PLANTA->angOUT = (int)outAngle(T);
+    PLANTA->angIN = (float)inAngle;
+    PLANTA->angOUT = (float)outAngle(T);
     PLANTA->tempo = T;
 }
 
