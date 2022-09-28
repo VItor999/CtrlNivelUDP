@@ -27,7 +27,7 @@
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
-#define NUM_COMM 40
+#define NUM_COMM 100
 #define LIN 2*NUM_COMM  
 #define COL 3
 
