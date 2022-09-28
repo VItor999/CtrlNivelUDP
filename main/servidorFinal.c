@@ -1,6 +1,5 @@
 // TODO:
-// Pensar na rotina de simulação
-// Pensar no cliente e em como fazer-lo operar
+// AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
 
 //===================== Bibliotecas utilizadas =====================//
 
@@ -152,16 +151,14 @@ int main(int argc, char *argv[]){
           atualizarPlanta(MENSAGEM,&PLANTASIM,PARAMCICLO);
           attPlanta = 0; // desliga a atualização da planta
           clock_gettime(clk_id,&clkPlanta);
-          printf("gol do brasil\n");
         }
         else {
           atualizarPlanta(MENSAGEM,&PLANTASIM,PARAM);
-          printf("gol vai neymar\n");
         }
         if(MENSAGEM.comando == C_S_START){
           INICIARGRAPH = 1;
           PLANTAATIVA = 1;
-          printf("(Re)Iniciando Processo\n");
+          printf("(e)Iniciando Processo\n");
         }
         pthread_mutex_unlock(&mutexGRAPH);
       }
