@@ -1,4 +1,4 @@
-#define GRAPH 1 
+//#define GRAPH 1 
 //===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
 #include <stdio.h>
@@ -31,6 +31,15 @@
 #define LIN 2*NUM_COMM  
 #define COL 3
 
+typedef struct TPCONTROLE
+{
+    long int tempo;
+    float angulo;
+    int nivel;
+    TPMENSAGEM msg;
+    /* data */
+}TPCONTROLE;
+
 //======================= Variáveis Globais  ======================//
 pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexGRAPH= PTHREAD_MUTEX_INITIALIZER;
@@ -44,6 +53,7 @@ int DISPONIVEL = LIN-1;
 int NOVALEITURA = 0;
 int NOVAESCRITA = 0;
 char BUFFER[BUFFER_SIZE]={0};
+TPCONTROLE CTRL;
 #ifdef DEBUG
 int CONTRUIM = 0;
 #endif 
@@ -54,6 +64,8 @@ void simula_comm(char buffer[]);
 void guarda_comando(TPMENSAGEM msg);
 int confirma_comando(TPMENSAGEM msg);
 void imprime_tabela();
+void simula_ctrl(TPCONTROLE *ctrl);
+void responde_servidor(TPMENSAGEM msg, char ans[]);
 
 /**
 *@brief Parametros do cliente
@@ -347,7 +359,7 @@ void imprime_tabela(){
 *
 *@param buffer ponteiro/endereço para onde dever ser copiada a mensagem gerada
 **/
-void simula_comm(char buffer[]){
+/*void simula_comm(char buffer[]){
     char aux[TAM] = "\0";
     char STR_COMM0[20] = "GetLevel!";
     char STR_COMM1[19] = "OpenValve#";
@@ -376,7 +388,7 @@ void simula_comm(char buffer[]){
         /*if(random()%11==0){
             waitms(999);
         }*/
-        #endif
+        /*#endif
         #ifndef RAND
         static int i = 1;
         snprintf(aux, TAM, "%d",i);
@@ -394,4 +406,121 @@ void simula_comm(char buffer[]){
         printf("\n%s ",STR_COMM);
     #endif
     strcpy(buffer,STR_COMM);
+}
+*/
+void simula_comm(char buffer[]){
+  static int i = 1;
+  char str_comm[20];
+  TPMENSAGEM msg;
+  if(i==1){
+    msg.comando = C_C_START;
+    msg.sequencia = i;//random()%1000;
+    msg.valor = VAZIO;
+    responde_servidor(msg, str_comm);
+    i++;
+    strcpy(buffer,str_comm);
+    
+  }else if(i==2){
+    msg.comando = C_C_CLOSE;
+    msg.sequencia = i;//random()%1000;
+    msg.valor = 50;
+    responde_servidor(msg, str_comm);
+    i++;
+    strcpy(buffer,str_comm);
+    
+  }else if(NOVALEITURA){
+    if(MENSAGEM.comando == C_C_GET){
+      CTRL.nivel = MENSAGEM.valor;
+      simula_ctrl(&CTRL);
+      CTRL.msg.sequencia = i;
+      obterInfo(&msg,CTRL.msg);
+      responde_servidor(msg, str_comm);
+    
+    }else if(MENSAGEM.comando == C_C_OPEN || MENSAGEM.comando == C_C_CLOSE){
+      msg.comando = C_C_GET;
+      msg.sequencia = i;//random()%1000;
+      msg.valor = VAZIO;
+      responde_servidor(msg, str_comm);
+    
+    }
+    printf("buffer %d: %s\t",i,str_comm);
+    i++;
+    strcpy(buffer,str_comm);
+  }
+}
+
+void responde_servidor(TPMENSAGEM msg, char ans[]){
+  #define TAM1 21
+  char aux[TAM1]="\0";
+  switch (msg.comando){
+  case C_C_OPEN:
+    strcat(ans,C_OPEN);
+    strcat(ans,TK);
+    snprintf(aux, TAM, "%d", msg.sequencia);
+    strcat(ans,aux);
+    strcat(ans,TK);
+    snprintf(aux, TAM, "%d", msg.valor);
+    strcat(ans,aux);
+    break;
+  case C_C_CLOSE:
+    strcat(ans,C_CLOSE);
+    strcat(ans,TK);
+    snprintf(aux, TAM, "%d", msg.sequencia);
+    strcat(ans,aux);
+    strcat(ans,TK);
+    snprintf(aux, TAM, "%d", msg.valor);
+    strcat(ans,aux);
+    break;
+  case C_C_GET:
+    strcat(ans,C_GETLV);
+    break;
+  case C_C_SET:
+    strcat(ans,C_SETMAX);
+    strcat(ans,TK);
+    snprintf(aux, TAM, "%d", msg.valor);
+    strcat(ans,aux);
+    break;
+  case C_C_COM:
+    strcat(ans,C_COMTEST);
+    break;
+  case C_C_START:
+    strcat(ans,C_START);
+    break;
+  
+  default:
+    strcat(ans,S_ERRO);
+    break;
+  }
+  strcat(ans,ENDMSG);
+}
+
+void simula_ctrl(TPCONTROLE *ctrl){
+    int angulo = controle(ctrl->nivel);
+    //printf("ang:%d\t",angulo);
+    if(angulo<0){
+      ctrl->msg.comando = C_C_CLOSE;
+    }else if(angulo>0){
+      ctrl->msg.comando = C_C_OPEN;
+    }else{
+      ctrl->msg.comando = VAZIO;
+    }
+    ctrl->msg.valor=angulo;
+}
+
+int  controle(int level){
+  static int flag_open=0;
+  static int flag_close=0;
+  int ang;
+  if(level < 80 && !flag_open){
+    ang = 100;
+    flag_open = 1;
+    flag_close = 0;
+  }else if(level > 80 && !flag_close){
+    ang = -100;
+    flag_close = 1;
+    flag_open = 0;
+  }else{
+    ang = 0;
+  }
+  return ang;
 }

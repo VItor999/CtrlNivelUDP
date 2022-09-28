@@ -2,6 +2,7 @@
 // AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
 
 //===================== Bibliotecas utilizadas =====================//
+#define GRAPH 1
 
 #include <pthread.h>
 #include <stdio.h>
@@ -31,7 +32,7 @@
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
 #define DELAY 700
-#define TGRAPH  1000 //ms
+#define TGRAPH  50 //ms
 
 
 //======================= Variáveis Globais  ======================//
@@ -258,7 +259,7 @@ void *threadComm(void *port){
       if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
         mensagem = analisarComando(msg,isserver);
         if(mensagem.comando == C_S_CLOSE || mensagem.comando == C_S_OPEN){
-          printf("VERIFICA TABELA!!!\n");
+          //printf("VERIFICA TABELA!!!\n");
           repetido = verifica_tabela(mensagem);
         }else{
           repetido = 0;
@@ -392,7 +393,7 @@ void* threadGraph(void* args)
 *@brief Futura Thread que devera conter o simulador
 *
 **/
-void simulador(){//simula simulador kkj
+void simulador(){//simula simulador kkj NÂO APAGAR%
   MENSAGEM.comando=0;
 }
 
