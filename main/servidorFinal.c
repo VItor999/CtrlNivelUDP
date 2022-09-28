@@ -190,6 +190,7 @@ int main(int argc, char *argv[]){
   //---- Encerrando
   pthread_join(pthComm, NULL);
   pthread_join(pthGraph, NULL);
+  imprime_tabela();
   printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
   printf("Encerrando main\n\n");
   return 0;
@@ -215,7 +216,7 @@ void *threadComm(void *port){
   char retorno [RETURN_SIZE]="\0";
   int flagNovaMsg = 0;
   char msg[strlen(buffer)];
-  int confirma = 0;
+  int repetido = 0;
   int nivel;
   sock = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_STREAM -> TCP/IP tempo de break é o zero poderiamos tentar alterar para outro blg 1 ms??
   // Esse bagulho não bloquei, minima ideia de como opera dar uma pesquisada em como usar o rev
@@ -259,34 +260,35 @@ void *threadComm(void *port){
       }
       if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
         mensagem = analisarComando(msg,isserver);
-        if(mensagem.comando == C_C_CLOSE || mensagem.comando == C_C_OPEN){
-          confirma = verifica_tabela(mensagem);
+        if(mensagem.comando == C_S_CLOSE || mensagem.comando == C_S_OPEN){
+          printf("VERIFICA TABELA!!!\n");
+          repetido = verifica_tabela(mensagem);
         }else{
-          confirma = 1;
+          repetido = 0;
         }
-        if(confirma){ // verifica se não é repetida
+        if(!repetido){ // verifica se não é repetida
           obterInfo(&MENSAGEM,mensagem);  //Escreve pro mundo
           NOVAMENSAGEM = 1;  //notifica o mundo
           pthread_mutex_unlock(&mutexCOM); // libera o mutex
           while(MENSAGEM.comando != 0){ // fica travado esperando o simulador dizer que usou a info
             //printf("AGUARDANDO SIMULADOR\n");
           }
-          if(mensagem.comando == C_C_CLOSE || mensagem.comando == C_C_OPEN){
+          if(mensagem.comando == C_S_CLOSE || mensagem.comando == C_S_OPEN){
             atualiza_tabela(mensagem);
           }
           //pthread_mutex_lock(&mutexSIM); // garante que não irá atrapalhar a simulação
           if (mensagem.comando == C_S_GET) mensagem.valor = PLANTASIM.nivel; //respostas 
           else if(mensagem.comando == C_S_SET) mensagem.valor = PLANTASIM.max; // respostas
           //pthread_mutex_unlock(&mutexSIM);
-          responde_cliente(mensagem, retorno);
+          //responde_cliente(mensagem, retorno);
         }else{ //caso msg repetida revisitar 
           #ifdef DEBUG
           CONTRUIM ++;
           #endif
           pthread_mutex_unlock(&mutexCOM);
-          mensagem.comando=C_S_ERRO;
-          responde_cliente(mensagem, retorno);
+          //responde_cliente(mensagem, retorno);
         }
+        responde_cliente(mensagem, retorno);
         //responder o cliente 
         #ifdef TEMPESTADE
         if (random()%9 != 0) {
@@ -483,7 +485,7 @@ int verifica_tabela(TPMENSAGEM msg){
   //int cont=0;
   if(TABREINIC == 0){ 
     for(i=LINHAATUAL;(i>LINHAATUAL-TOL && i>=0 && flag_retorno!=1);i--){
-      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
+      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){//
         printf("\tREP!!!");
         flag_retorno = 1; //ativa flag de retorno para "erro"
       }
@@ -494,14 +496,14 @@ int verifica_tabela(TPMENSAGEM msg){
      // 31 .... 39 -> primeiro for 
      // zero flag 
      for(i=LIN-LINHAATUAL-TOL;(i<LIN && flag_retorno!=1);i++){
-      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
+      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){//
         printf("\tREP!!!");
         flag_retorno = 1; //ativa flag de retorno para "erro"
       }
       //cont++;
     }
     for(i =0; (i<LINHAATUAL && flag_retorno!=1);i++){
-       if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0){//&& MENSAGEM.sequencia == TABELA[i][j])
+       if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){//
         printf("\tREP!!!");
         flag_retorno = 1; //ativa flag de retorno para "erro"
       }
