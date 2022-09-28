@@ -18,7 +18,7 @@
 
 //#define DEBUG 1
 // Defines do Protocolo próprio escrito do ponto de vista do cliente (COMANDOS AZUIS)
-// O_XXXX output qualquer comando DE SAIDA (AZUL NO PDF)
+// C_XXXX output qualquer comando DE SAIDA (AZUL NO PDF)
 // comando#XX#YYY!
 //		  12345678		
 
@@ -155,12 +155,12 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
 					//agora tenho que quebrar denovo a string
 					tk = strtok_r(resto, TK, &resto); // pega num sequencia
 					//pensar o que fazer aqui 
-					retorno.sequencia = atoi(tk); // capturei numero de sequencia
+					retorno.sequencia = VAZIO; // capturei numero de sequencia
 					// verificar se podem ocorrer coisas do tipo 001 010L0 e por ai vai 
 					//possível solução: utilizar um for
 					//if (strcmp(tk,itoa(retorno.sequencia))){}
 					retorno.comando = C_S_SET;
-					retorno.valor = MAXLEVEL;
+					retorno.valor = atoi(tk);
 				}
 				else{
 					return retorno;

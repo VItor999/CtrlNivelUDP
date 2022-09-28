@@ -70,12 +70,12 @@ int main(int argc, char *argv[])
   printf("Please enter the message: ");
   
   while (out != '\n'){
-    if (flagAguardo) // estaria aguardando receber a resposta para continuar com uma nova escrita
+    if (!flagAguardo) // estaria aguardando receber a resposta para continuar com uma nova escrita
     {
-      printf("Continuo rodando\n");
-    }
-    else // mandar uma  nova mensagem
-    {
+   //   printf("Continuo rodando\n");
+   // }
+   // else // mandar uma  nova mensagem
+   // {
 	  bzero(buffer, BUFFER_SIZE);
     fgets(buffer, BUFFER_SIZE, stdin); 
   

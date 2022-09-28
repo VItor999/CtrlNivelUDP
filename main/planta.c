@@ -1,4 +1,4 @@
-#define GRAPH 1 
+//#define GRAPH 1 
 
 #include <pthread.h>
 #include <stdio.h>
@@ -147,8 +147,11 @@ void atualizarPlanta (TPMENSAGEM msg){
     printf("LA%f",level);
     level = level + 0.00002 * dT * (influx - outflux);
     printf("LF%f",level);
-    if (level <=0){
+    if (level <0){
         level = 0;
+    }
+    else if (level.100){
+        level =100;
     }
     PLANTA.nivel = (int)(level*100);
     PLANTA.angIN = (int)inAngle;
