@@ -248,7 +248,9 @@ void *threadComm(void *port){
         char *resto = buffer;
         tk = strtok_r(resto, "\n", &resto);
         #ifdef DEBUG
-        if (buffer[0]!='\n')printf("RECV %s", buffer);
+        if (buffer[0]!='\n'){
+          printf("RECV %s", buffer);
+        }
         #endif
         strcpy(msg, buffer);
         bzero(buffer, BUFFER_SIZE);
