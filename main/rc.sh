@@ -1,2 +1,2 @@
-gcc -o cliente -pthread -lrt cmainthread.c
+gcc -o cliente -pthread -lrt clienteFinal.c
 ./cliente localhost 20000

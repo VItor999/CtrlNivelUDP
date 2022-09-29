@@ -27,15 +27,19 @@
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
-#define NUM_COMM 100
+#define NUM_COMM 500
 #define LIN 2*NUM_COMM  
 #define COL 3
+#define TCTRL 100
+#define TGRAPH 100
+#define REF 50
 
 typedef struct TPCONTROLE
 {
     long int tempo;
     float angulo;
     int nivel;
+    int flagEnvio;
     TPMENSAGEM msg;
     /* data */
 }TPCONTROLE;
@@ -59,13 +63,17 @@ int CONTRUIM = 0;
 #endif 
 //===================== Cabeçalhos de Funções =====================//
 
+void *threadComm(void *pcli);
 void error(const char *msg);
-void simula_comm(char buffer[]);
+//void simula_comm(char buffer[]);
 void guarda_comando(TPMENSAGEM msg);
 int confirma_comando(TPMENSAGEM msg);
 void imprime_tabela();
-void simula_ctrl(TPCONTROLE *ctrl);
+//void simula_ctrl(TPCONTROLE *ctrl);
 void responde_servidor(TPMENSAGEM msg, char ans[]);
+int bang_bang(int level);
+void input_controle();
+void output_controle(char buffer[]);
 
 /**
 *@brief Parametros do cliente
@@ -82,6 +90,179 @@ typedef struct PCLIENTE
 //#################################################################//
 //#########################    MAIN    ############################//
 //#################################################################//
+
+int main(int argc, char *argv[]){
+    system("clear");
+    #ifdef DEBUG 
+    srandom(time(NULL));
+    #endif
+
+    //---- Threads 
+     pthread_t pthComm;       
+  
+
+    PCLIENTE pcliente;
+    int sockfd;
+ 
+    //---- Variáveis Auxiliares 
+    CTRL.flagEnvio = 1;
+    int r;
+    int CONT_OUT=0;
+
+    int attCtrl = 0;
+    int attGraph = 0;
+    struct timespec clkCtrl;
+    struct timespec clkGraph;
+    long int deltaT = 0;
+    clockid_t clk_id = CLOCK_MONOTONIC_RAW;
+
+     //---- Verificação dos parametros 
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage %s hostname port\n", argv[0]);
+        exit(0);
+    }
+ 
+    pcliente.porta = htons(atoi(argv[2]));
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
+    if (sockfd < 0){
+        error("ERROR opening socket");
+    }
+    pcliente.charsv = argv[1];
+  
+    //---- Cria e  Testa a thread
+    printf("Cliente Inicializado, parabens\n");
+    r = pthread_create(&pthComm, NULL, threadComm, (void *)&pcliente);
+    if (r){
+        fprintf(stderr, "Error - pthread_create() return code: %d\n",  r);
+        exit(EXIT_FAILURE);
+    }
+     //---- LOOP principal
+ 
+    clock_gettime(clk_id,&clkCtrl);
+    clock_gettime(clk_id,&clkGraph);
+
+    while (OUT != 27){ // pressionando esq encerro o server
+        // Variavel OUT é caputara dela thread que está sempre operando -> COMM
+        attCtrl = deltaTempo(TCTRL,clkCtrl);
+        attGraph = deltaTempo(TGRAPH,clkGraph);
+        if (!NOVAESCRITA && pthread_mutex_trylock(&mutexCOM)==0){
+            /*if(CONT_OUT==NUM_COMM){
+                NOVAESCRITA = 0;
+            }else{*/
+                //simula_comm(BUFFER); //escreve no buffer global para enviar
+                
+                if(attCtrl){
+                    output_controle(BUFFER);
+                    clock_gettime(clk_id,&clkCtrl);
+                    NOVAESCRITA = 1;
+                    //OUTROS COMANDOS QUE TB TEM QUE ESCREVRER, FAZER O IFS DESSAS PORRA
+                }
+                //CONT_OUT++;
+            //}
+            pthread_mutex_unlock(&mutexCOM);
+        }
+        if (NOVALEITURA && pthread_mutex_trylock(&mutexCOM)==0){
+            #ifdef DEBUG
+            //printf("RECV: COM %d\tSEQ %d\tVAL %d\n",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
+            #endif
+            if(MENSAGEM.comando == C_C_GET 
+            || MENSAGEM.comando == C_C_OPEN 
+            || MENSAGEM.comando == C_C_CLOSE || MENSAGEM.comando == C_S_ERRO){
+                //AQUI VAI UM LOCK DO MUTEX GRAFICO 
+                //CHAMAR ATUALIZACAO DO CONTROLE AQUI
+                input_controle();
+            }
+            
+            NOVALEITURA = 0;
+            pthread_mutex_unlock(&mutexCOM);
+        }
+       
+    }
+    //---- Encerrando
+    pthread_join(pthComm, NULL);
+    printf("Encerrando main\n\n");
+    #ifdef DEBUG
+    imprime_tabela();
+    printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
+    #endif
+    return 0;
+}
+
+void input_controle(){
+    int angulo;
+
+    if(MENSAGEM.comando == C_C_GET){
+        CTRL.nivel = MENSAGEM.valor;
+
+        angulo = bang_bang(CTRL.nivel);
+        if(angulo<0){
+            CTRL.msg.comando = C_C_CLOSE;
+            angulo = -angulo;
+        }else if(angulo>0){
+            CTRL.msg.comando = C_C_OPEN;
+        }else{
+            CTRL.msg.comando = C_C_OPEN;
+        }
+        CTRL.msg.valor = angulo;
+
+    }else if(MENSAGEM.comando == C_C_OPEN || MENSAGEM.comando == C_C_CLOSE){
+        CTRL.msg.comando = C_C_GET;
+        CTRL.msg.valor = VAZIO;
+    
+    }else{
+        printf("ERRO ");//, PENSAR NO QUE FAZER, APENAS RETRANSMITE\n");
+    }
+    CTRL.flagEnvio = 1;
+}
+
+void output_controle(char buffer[]){
+    static int i = 0;
+    if(i==0){
+        CTRL.msg.comando = C_C_START;
+        CTRL.msg.sequencia = i;//random()%1000;
+        CTRL.msg.valor = VAZIO;
+        CTRL.flagEnvio = 1;
+        
+    }else if(i==1){
+        CTRL.msg.comando = C_C_OPEN;
+        CTRL.msg.sequencia = i;//random()%1000;
+        CTRL.msg.valor = 50;
+        CTRL.flagEnvio = 1;
+        
+    }
+    bzero(buffer, BUFFER_SIZE);
+    if(CTRL.flagEnvio){
+        CTRL.msg.sequencia = i;
+        responde_servidor(CTRL.msg, buffer);
+        CTRL.flagEnvio = 0;
+        printf("Buffer %d: %s",i,buffer);
+        if(i<100){
+            i++;
+        }else{
+            i = 2;
+        }
+    }
+}
+
+int bang_bang(int level){
+  static int flag_open=1;
+  static int flag_close=0;
+  int ang;
+  if(level < REF && !flag_open){
+    ang = 100;
+    flag_open = 1;
+    flag_close = 0;
+  }else if(level > REF && !flag_close){
+    ang = -100;
+    flag_close = 1;
+    flag_open = 0;
+  }else{
+    ang = 0;
+  }
+  return ang;
+}
 
 void *threadComm(void *pcli){
 
@@ -191,7 +372,7 @@ void *threadComm(void *pcli){
                     if((((mensagem_recv.comando+10) == mensagem_send.comando) 
                         && (mensagem_recv.sequencia == mensagem_send.sequencia)) 
                         || mensagem_recv.comando == C_S_ERRO){
-                        //printf("\tRECV: %s", msg);
+                        printf("\tRECV: %s\n", buffer);
                         esperandoResposta = 0;
                         #ifndef AUTO
                         printf("\n");
@@ -214,79 +395,6 @@ void *threadComm(void *pcli){
     printf("\n\nEncerrando threadCOM\n\n");
     return 0;
 }
-
-int main(int argc, char *argv[]){
-    system("clear");
-    #ifdef DEBUG 
-    srandom(time(NULL));
-    #endif
-
-    //---- Threads 
-     pthread_t pthComm;       
-  
-
-    PCLIENTE pcliente;
-    int sockfd;
- 
-     //---- Variáveis Auxiliares 
-    int r;
-    int CONT_OUT=0;
-
-     //---- Verificação dos parametros 
-    if (argc < 3)
-    {
-        fprintf(stderr, "usage %s hostname port\n", argv[0]);
-        exit(0);
-    }
- 
-    pcliente.porta = htons(atoi(argv[2]));
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    fcntl(sockfd, F_SETFL, O_NONBLOCK);
-    if (sockfd < 0){
-        error("ERROR opening socket");
-    }
-    pcliente.charsv = argv[1];
-  
-    //---- Cria e  Testa a thread
-    printf("Cliente Inicializado, parabens\n");
-    r = pthread_create(&pthComm, NULL, threadComm, (void *)&pcliente);
-    if (r){
-        fprintf(stderr, "Error - pthread_create() return code: %d\n",  r);
-        exit(EXIT_FAILURE);
-    }
-     //---- LOOP principal
- 
-    while (OUT != 27){ // pressionando esq encerro o server
-        // Variavel OUT é caputara dela thread que está sempre operando -> COMM
-        if (!NOVAESCRITA && pthread_mutex_trylock(&mutexCOM)==0){
-            if(CONT_OUT==NUM_COMM){
-                NOVAESCRITA = 0;
-            }else{
-                simula_comm(BUFFER); //escreve no buffer global para enviar
-                NOVAESCRITA = 1;
-                CONT_OUT++;
-            }
-            pthread_mutex_unlock(&mutexCOM);
-        }
-        if (NOVALEITURA && pthread_mutex_trylock(&mutexCOM)==0){
-            #ifdef DEBUG
-            printf("\tCOM %d\tSEQ %d\tVAL %d\n",MENSAGEM.comando,MENSAGEM.sequencia,MENSAGEM.valor);
-            #endif
-            NOVALEITURA = 0;
-            pthread_mutex_unlock(&mutexCOM);
-        }
-       
-    }
-    //---- Encerrando
-    pthread_join(pthComm, NULL);
-    printf("Encerrando main\n\n");
-    #ifdef DEBUG
-    imprime_tabela();
-    printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
-    #endif
-    return 0;
-}
-
 
 /**
 *@brief Verifica posição livre na tabela de comandos enviados. 
@@ -354,101 +462,6 @@ void imprime_tabela(){
   }
 }
 
-/**
-*@brief Simula a comunicação
-*
-*@param buffer ponteiro/endereço para onde dever ser copiada a mensagem gerada
-**/
-/*void simula_comm(char buffer[]){
-    char aux[TAM] = "\0";
-    char STR_COMM0[20] = "GetLevel!";
-    char STR_COMM1[19] = "OpenValve#";
-    char STR_COMM2[20] = "CloseValve#";
-   
-    char STR_COMM[20];
-    int resto = random()%3;
-    if (resto==0){
-        strcpy(STR_COMM,STR_COMM0);
-    }
-    else{
-        if(resto==1){
-            strcpy(STR_COMM,STR_COMM1);
-        }
-        else {
-            strcpy(STR_COMM,STR_COMM2);
-        }
-        #ifdef RAND
-        snprintf(aux, TAM, "%d", random()%1000);
-        strcat(STR_COMM,aux);
-        strcat(STR_COMM,TK);
-        bzero(aux,TAM);
-        snprintf(aux, TAM, "%d", random()%100);
-        strcat(STR_COMM,aux);
-        strcat(STR_COMM,ENDMSG);
-        /*if(random()%11==0){
-            waitms(999);
-        }*/
-        /*#endif
-        #ifndef RAND
-        static int i = 1;
-        snprintf(aux, TAM, "%d",i);
-        strcat(STR_COMM,aux);
-        strcat(STR_COMM,TK);
-        bzero(aux,TAM);
-        snprintf(aux, TAM, "%d", i);
-        strcat(STR_COMM,aux);
-        strcat(STR_COMM,ENDMSG);
-        i++;
-        #endif
-        
-    }
-    #ifdef DEBUG
-        printf("\n%s ",STR_COMM);
-    #endif
-    strcpy(buffer,STR_COMM);
-}
-*/
-void simula_comm(char buffer[]){
-  static int i = 1;
-  char str_comm[20];
-  TPMENSAGEM msg;
-  if(i==1){
-    msg.comando = C_C_START;
-    msg.sequencia = i;//random()%1000;
-    msg.valor = VAZIO;
-    responde_servidor(msg, str_comm);
-    i++;
-    strcpy(buffer,str_comm);
-    
-  }else if(i==2){
-    msg.comando = C_C_CLOSE;
-    msg.sequencia = i;//random()%1000;
-    msg.valor = 50;
-    responde_servidor(msg, str_comm);
-    i++;
-    strcpy(buffer,str_comm);
-    
-  }else if(NOVALEITURA){
-    if(MENSAGEM.comando == C_C_GET){
-      CTRL.nivel = MENSAGEM.valor;
-      simula_ctrl(&CTRL);
-      CTRL.msg.sequencia = i;
-      obterInfo(&msg,CTRL.msg);
-      responde_servidor(msg, str_comm);
-    
-    }else if(MENSAGEM.comando == C_C_OPEN || MENSAGEM.comando == C_C_CLOSE){
-      msg.comando = C_C_GET;
-      msg.sequencia = i;//random()%1000;
-      msg.valor = VAZIO;
-      responde_servidor(msg, str_comm);
-    
-    }
-    printf("buffer %d: %s\t",i,str_comm);
-    i++;
-    strcpy(buffer,str_comm);
-  }
-}
-
 void responde_servidor(TPMENSAGEM msg, char ans[]){
   #define TAM1 21
   char aux[TAM1]="\0";
@@ -492,35 +505,4 @@ void responde_servidor(TPMENSAGEM msg, char ans[]){
     break;
   }
   strcat(ans,ENDMSG);
-}
-
-void simula_ctrl(TPCONTROLE *ctrl){
-    int angulo = controle(ctrl->nivel);
-    //printf("ang:%d\t",angulo);
-    if(angulo<0){
-      ctrl->msg.comando = C_C_CLOSE;
-    }else if(angulo>0){
-      ctrl->msg.comando = C_C_OPEN;
-    }else{
-      ctrl->msg.comando = VAZIO;
-    }
-    ctrl->msg.valor=angulo;
-}
-
-int  controle(int level){
-  static int flag_open=0;
-  static int flag_close=0;
-  int ang;
-  if(level < 80 && !flag_open){
-    ang = 100;
-    flag_open = 1;
-    flag_close = 0;
-  }else if(level > 80 && !flag_close){
-    ang = -100;
-    flag_close = 1;
-    flag_open = 0;
-  }else{
-    ang = 0;
-  }
-  return ang;
 }

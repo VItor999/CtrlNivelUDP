@@ -55,7 +55,7 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
         if (msg.comando == C_S_SET)
         {
            PLANTA->max = msg.valor; // valor de 0-100
-           printf("QUEM È O MAX %d",PLANTA->max);
+           //printf("QUEM È O MAX %d",PLANTA->max);
         }
         if(msg.comando == C_S_START){
             influx = 0;     // inicia com a valvula Aberta em 50%
@@ -69,7 +69,7 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
             PLANTA->max = MAXINIC;
             PLANTA->angIN  = (float)inAngle;
             PLANTA->nivel = (int)level;     
-            printf("ZERADITO");      
+            //printf("ZERADITO");      
         }
     }
     if(opc == CICLO || opc == PARAMCICLO){ // 1 simula  de fato

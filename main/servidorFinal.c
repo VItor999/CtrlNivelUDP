@@ -2,7 +2,7 @@
 // AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
 
 //===================== Bibliotecas utilizadas =====================//
-#define GRAPH 1
+//#define GRAPH 1
 
 #include <pthread.h>
 #include <stdio.h>
@@ -26,13 +26,13 @@
 #define DEBUG 1 
 //#define TEMPESTADE 1
 //#define TROVOADAS 1
-#define LIN 40  
+#define LIN 100  
 #define COL 3
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
 #define DELAY 700
-#define TGRAPH  50 //ms
+#define TGRAPH  200 //ms
 
 
 //======================= Variáveis Globais  ======================//
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]){
     attGraphTime = deltaTempo(TGRAPH,clkGraph);
     if (NOVAMENSAGEM && pthread_mutex_trylock(&mutexCOM)==0){
       comando = MENSAGEM.comando;
-      printf("\tCOM %d\tSEQ %d\tVAL %d",comando,MENSAGEM.sequencia,MENSAGEM.valor);
+      //printf("\tCOM %d\tSEQ %d\tVAL %d",comando,MENSAGEM.sequencia,MENSAGEM.valor);
       if (comando == C_S_CLOSE || comando == C_S_OPEN ||
           comando == C_S_SET   || comando == C_S_START){
         pthread_mutex_lock(&mutexGRAPH);
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]){
         if(MENSAGEM.comando == C_S_START){
           INICIARGRAPH = 1;
           PLANTAATIVA = 1;
-          printf("(e)Iniciando Processo\n");
+          printf("(Re)Iniciando Processo\n");
         }
         pthread_mutex_unlock(&mutexGRAPH);
       }
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]){
   //---- Encerrando
   pthread_join(pthComm, NULL);
   pthread_join(pthGraph, NULL);
-  imprime_tabela();
+  //imprime_tabela();
   printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
   printf("Encerrando main\n\n");
   return 0;
@@ -357,7 +357,7 @@ void* threadGraph(void* args)
             datadraw(data,(double)PLANTASIM.tempo/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
             #endif
             #ifndef GRAPH
-            printf("Atualizou:\t %6ld \t %3d \t%3.3f \t%3.3f\n",PLANTASIM.tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
+            //printf("PLANTA:\t%6ld\t%3d\t%3.3f\t%3.3f\n",PLANTASIM.tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
             #endif
             ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);
@@ -384,7 +384,7 @@ void* threadGraph(void* args)
       quitevent();
       #endif
     }
-    printf("FIM GRAFICO");
+    printf("FIM GRAFICO\n");
     return;
 }
 
@@ -519,7 +519,7 @@ int verifica_tabela(TPMENSAGEM msg){
 **/
 void imprime_tabela(){
   int i;
-  for(i=0; i<LINHAATUAL;i++){
+  for(i=0; i<LIN;i++){
     printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
   }
 }
