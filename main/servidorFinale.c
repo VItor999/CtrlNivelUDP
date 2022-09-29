@@ -24,8 +24,8 @@
 //====================== Definições efetuadas ======================//
 
 #define DEBUG 1 
-#define TEMPESTADE 1
-#define TROVOADAS 1
+//#define TEMPESTADE 1
+//#define TROVOADAS 1
 #define LIN 100  
 #define COL 3
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
