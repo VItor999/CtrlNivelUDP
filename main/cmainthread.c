@@ -24,7 +24,7 @@
 #define BUFFER_SIZE 100
 #define TAM 10
 #define TIMEOUT 100 // milissegundos
-#define NUM_COMM 40
+#define NUM_COMM 500
 #define LIN 2*NUM_COMM  
 #define COL 3
 
@@ -262,7 +262,7 @@ int main(int argc, char *argv[]){
     }
     //---- Encerrando
     pthread_join(pthComm, NULL);
-    printf("Encerrando main\n\n");
+    printf("Encerrando main, CONT_OUT:%d\n\n",CONT_OUT);
     #ifdef DEBUG
     imprime_tabela();
     printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );

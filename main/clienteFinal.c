@@ -26,11 +26,11 @@
 
 #define BUFFER_SIZE 100
 #define TAM 10
-#define TIMEOUT 100 // milissegundos
-#define NUM_COMM 500
-#define LIN 2*NUM_COMM  
+#define TIMEOUT 200 // milissegundos
+//#define NUM_COMM 100
+#define LIN 1000 //2*NUM_COMM  
 #define COL 3
-#define TCTRL 100
+#define TCTRL 10
 #define TGRAPH 100
 #define REF 50
 
@@ -73,7 +73,7 @@ void imprime_tabela();
 void responde_servidor(TPMENSAGEM msg, char ans[]);
 int bang_bang(int level);
 void input_controle();
-void output_controle(char buffer[]);
+void output_controle();
 
 /**
 *@brief Parametros do cliente
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]){
                 //simula_comm(BUFFER); //escreve no buffer global para enviar
                 
                 if(attCtrl){
-                    output_controle(BUFFER);
+                    output_controle();
                     clock_gettime(clk_id,&clkCtrl);
                     NOVAESCRITA = 1;
                     //OUTROS COMANDOS QUE TB TEM QUE ESCREVRER, FAZER O IFS DESSAS PORRA
@@ -217,7 +217,7 @@ void input_controle(){
     CTRL.flagEnvio = 1;
 }
 
-void output_controle(char buffer[]){
+void output_controle(){
     static int i = 0;
     if(i==0){
         CTRL.msg.comando = C_C_START;
@@ -232,17 +232,13 @@ void output_controle(char buffer[]){
         CTRL.flagEnvio = 1;
         
     }
-    bzero(buffer, BUFFER_SIZE);
+    bzero(BUFFER, BUFFER_SIZE);
     if(CTRL.flagEnvio){
         CTRL.msg.sequencia = i;
-        responde_servidor(CTRL.msg, buffer);
+        responde_servidor(CTRL.msg, BUFFER);
         CTRL.flagEnvio = 0;
-        printf("Buffer %d: %s",i,buffer);
-        if(i<100){
-            i++;
-        }else{
-            i = 2;
-        }
+        printf("Buffer %d: %s",i,BUFFER);
+        i++;
     }
 }
 
@@ -308,9 +304,8 @@ void *threadComm(void *pcli){
         //waitms(WAIT);
         OUT = teclado(); 
         // Tentar escrever/ ENVIO
-        if(NOVAESCRITA 
-            && pthread_mutex_trylock(&mutexCOM)==0 
-            && !esperandoResposta){
+        if(NOVAESCRITA && !esperandoResposta && !leituraDisponivel){
+            //printf("in 1 \n");
             bzero(buffer, BUFFER_SIZE);
             strcpy(buffer,BUFFER);
             rEnvio = write(sockfd, buffer, strlen(buffer));
@@ -318,7 +313,8 @@ void *threadComm(void *pcli){
                 error("ERROR writing to socket");
             }else{
                 mensagem_send = analisarComando(buffer, 1);
-                clock_gettime(clk_id,&start);     
+                clock_gettime(clk_id,&start);
+                //printf("Start: %ld\n", start.tv_nsec);   
                 if(mensagem_send.comando == C_S_CLOSE || mensagem_send.comando == C_S_OPEN){
                     guarda_comando(mensagem_send); // já escreve na tabela 
                 }
@@ -326,21 +322,23 @@ void *threadComm(void *pcli){
                 //CONT_OUT++;
                 //NOVAESCRITA = 0;
             }
-            pthread_mutex_unlock(&mutexCOM);
+            //pthread_mutex_unlock(&mutexCOM);
+            //printf("out 1 \n");
         }
         else if (esperandoResposta){ // estaria aguardando receber a resposta para continuar com uma nova escrita
         // dou time out 
             //printf("Continuo rodando\n");
             //printf(".");
             #ifdef AUTO
-            if (deltaTempo(TIMEOUT,start)){
+            if(deltaTempo(TIMEOUT,start)){
                 esperandoResposta = 0;
-                while(pthread_mutex_trylock(&mutexCOM)==0); //REVISAR ISSO ......
+                //while(pthread_mutex_trylock(&mutexCOM)==0); //REVISAR ISSO ......
                 //enquento não pega fica parado
                 //se deu bom 
                 NOVAESCRITA = 0;
                 //CONT_OUT++;
-                pthread_mutex_unlock(&mutexCOM);
+                //pthread_mutex_unlock(&mutexCOM);
+                //printf("out mandrake \n");
             }
             #endif
         }
@@ -358,8 +356,9 @@ void *threadComm(void *pcli){
                 if (msg[0]=='\n'){ // desligar servidor 
                     OUT = 27;
                 }
-            }
-            if (pthread_mutex_trylock(&mutexCOM)==0){ // peguei o mutex 
+            
+            //if (pthread_mutex_trylock(&mutexCOM)==0){
+                //printf("in 2 \n"); // peguei o mutex 
                 mensagem_recv = analisarComando(msg, 0);
                 if(mensagem_recv.comando == C_C_CLOSE || mensagem_recv.comando == C_C_OPEN){
                     confirma = confirma_comando(mensagem_recv);
@@ -368,7 +367,7 @@ void *threadComm(void *pcli){
                 }    
                 if (confirma){
                     obterInfo(&MENSAGEM,mensagem_recv); // se é algo valido mando pro mundo
-                    NOVALEITURA = 1;  //notifica o mundo
+                    //NOVALEITURA = 1;  //notifica o mundo COMENTEI TENTANDO ARRUMAR BUGS
                     if((((mensagem_recv.comando+10) == mensagem_send.comando) 
                         && (mensagem_recv.sequencia == mensagem_send.sequencia)) 
                         || mensagem_recv.comando == C_S_ERRO){
@@ -379,13 +378,19 @@ void *threadComm(void *pcli){
                         #endif
                     }   
                 }
+            }
+            if (pthread_mutex_trylock(&mutexCOM)==0){
+                if(confirma){
+                    NOVALEITURA = 1;
+                }
                 NOVAESCRITA = 0;
                 //CONT_OUT++;
                 leituraDisponivel = 0;
                 pthread_mutex_unlock(&mutexCOM); // libera o mutex
+                //printf("out 2 \n");
             }
             else{
-                leituraDisponivel =1;
+                leituraDisponivel = 1;
             }            
         }
     }
