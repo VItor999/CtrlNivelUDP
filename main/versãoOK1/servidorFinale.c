@@ -2,7 +2,7 @@
 // AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
 
 //===================== Bibliotecas utilizadas =====================//
-//#define GRAPH 1
+#define GRAPH 1
 
 #include <pthread.h>
 #include <stdio.h>
@@ -32,8 +32,7 @@
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
 #define DELAY 10
-#define TGRAPH  50 //em ms
-#define TIMEBLOCK 10 //em ms
+#define TGRAPH  50 //ms
 
 
 //======================= Variáveis Globais  ======================//
@@ -80,7 +79,6 @@ int main(int argc, char *argv[]){
   #endif
   //---- UDP
   int porta;
-  
 
   //---- Threads 
   pthread_t pthComm;
@@ -210,10 +208,7 @@ int main(int argc, char *argv[]){
 **/
 void *threadComm(void *port){
   TPMENSAGEM mensagem;
-  int sock, length, fromlen;
-  struct timeval read_timeout;
-  read_timeout.tv_sec = 0;
-  read_timeout.tv_usec = TIMEBLOCK;
+  int sock, length, fromlen, n = -1;
   struct sockaddr_in server;
   struct sockaddr_in from;
   char buffer[BUFFER_SIZE];
@@ -222,19 +217,9 @@ void *threadComm(void *port){
   char msg[strlen(buffer)];
   int repetido = 0;
   int nivel;
-  int rRecv=-1;
-  int rSend;
-
-  //-- Temporização 
-  struct timespec clkCOM;
-  clockid_t clk_id = CLOCK_MONOTONIC_RAW;
-  int attCOM =0;
-  clock_gettime(clk_id,&clkCOM);
-
   sock = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_STREAM -> TCP/IP tempo de break é o zero poderiamos tentar alterar para outro blg 1 ms??
   // Esse bagulho não bloquei, minima ideia de como opera dar uma pesquisada em como usar o rev
   fcntl(sock, F_SETFL, O_NONBLOCK);
-  //setsockopt(sock,IPPROTO_UDP,SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
   if (sock < 0){
     error("Opening socket");
   }
@@ -250,21 +235,15 @@ void *threadComm(void *port){
   fromlen = sizeof(struct sockaddr_in);
   msg[0]='\0';
   printf("Servico de comunicação iniciado em thread\n");
-  
+
   while (OUT != 27 && msg[0]!='\n'){ // pressionando esq encerro o server
-    OUT =teclado();
-    attCOM = deltaTempo(TIMEBLOCK,clkCOM); 
-    if(!flagNovaMsg && attCOM){ // só altero n se leio 
-     // printf("tin %ld\n", read_timeout.tv_usec);
-      rRecv= recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
-      //printf("\tbuffer: %s\n",buffer);
-      clock_gettime(clk_id,&clkCOM);
-      attCOM =0; //A GARANTIA SOU EU
-      //printf("tout %ld\n", read_timeout.tv_usec);
+    OUT = teclado(); 
+    if(!flagNovaMsg){ // só altero n se leio 
+      n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
     }
-    if (rRecv < 0 && rRecv != -1){
+    if (n < 0 && n != -1){
       error("Receber");
-    }else if (rRecv > 0){// captura de algo novo 
+    }else if (n > 0){// captura de algo novo 
       if(!flagNovaMsg){
         char *tk;
         char *resto = buffer;
@@ -273,10 +252,9 @@ void *threadComm(void *port){
         if (buffer[0]!='\n'){
           //printf("RECV %s", buffer);
         }
-        #endif  
+        #endif
         strcpy(msg, buffer);
         bzero(buffer, BUFFER_SIZE);
-        rRecv =0;
         //if (msg[0]=='\n'){ // desligar servidor 
         //  OUT = 27;
         //}
@@ -325,11 +303,11 @@ void *threadComm(void *port){
           }
           #endif
           // altero n com um envio 
-          rSend = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
-          if (rSend < 0){
+          n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
+          if (n < 0){
             error("Envio");
           }else{
-            printf("\tSEND %s\n",retorno);
+            //printf("\tSEND %s\n",retorno);
           }
         #ifdef TEMPESTADE
         }
