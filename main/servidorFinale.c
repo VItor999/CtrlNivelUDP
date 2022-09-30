@@ -2,7 +2,7 @@
 // AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
 
 //===================== Bibliotecas utilizadas =====================//
-//#define GRAPH 1
+#define GRAPH 1
 
 #include <pthread.h>
 #include <stdio.h>
@@ -31,8 +31,8 @@
 #define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
 #define BUFFER_SIZE 100
 #define RETURN_SIZE 10
-#define DELAY 700
-#define TGRAPH  200 //ms
+#define DELAY 10
+#define TGRAPH  50 //ms
 
 
 //======================= Variáveis Globais  ======================//
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]){
     // Variavel OUT é caputara dela thread que está sempre operando -> COMM
     attPlanta = deltaTempo(TPLANTA,clkPlanta);
     attGraphTime = deltaTempo(TGRAPH,clkGraph);
-    if (NOVAMENSAGEM && pthread_mutex_trylock(&mutexCOM)==0){
+    if (NOVAMENSAGEM){// && pthread_mutex_trylock(&mutexCOM)==0){
       comando = MENSAGEM.comando;
       //printf("\tCOM %d\tSEQ %d\tVAL %d",comando,MENSAGEM.sequencia,MENSAGEM.valor);
       if (comando == C_S_CLOSE || comando == C_S_OPEN ||
@@ -164,6 +164,7 @@ int main(int argc, char *argv[]){
         pthread_mutex_unlock(&mutexGRAPH);
       }
       simulador(); // NÂO COMENTAR ESSA BAGAÇA PQ TEM UM MANDRAKE LÁ NO MEIO DO THREAD COM QUE NÂO FOI CORRIGIDO
+      pthread_mutex_lock(&mutexCOM);
       NOVAMENSAGEM = 0;
       pthread_mutex_unlock(&mutexCOM);
     }
@@ -334,6 +335,7 @@ void* threadGraph(void* args)
     int exit =0, ctrl=0, comando=0;
     int hasStarted = 0;
     int atualizarPlot = 0;
+    static int tempo =0;
     #ifdef GRAPH
     Tdataholder *data;
     data = datainit(1000,500,150,120,(double)LVINIC,(double)0,(double)0);
@@ -349,17 +351,19 @@ void* threadGraph(void* args)
         if(pthread_mutex_trylock(&mutexGRAPH)==0){
           INICIARGRAPH = 0;
         // botar o limpar grafico e inicio aqui
+	  tempo =0;
           pthread_mutex_unlock(&mutexGRAPH);
         } 
       }
       if(!INICIARGRAPH){
         if(ATTGRAPH){
+	    tempo+= TGRAPH;
             pthread_mutex_lock(&mutexGRAPH);
             #ifdef GRAPH
-            datadraw(data,(double)PLANTASIM.tempo/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
+            datadraw(data,(double)tempo/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
             #endif
             #ifndef GRAPH
-            printf("PLANTA:\t%6ld\t%3d\t%3.3f\t%3.3f\n",PLANTASIM.tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
+            printf("PLANTA:\t%6ld\t%3d\t%3.3f\t%3.3f\n",tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
             #endif
             ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);

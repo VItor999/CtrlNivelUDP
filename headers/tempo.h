@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-
+#include "kbhit.h"
 //====================== Definições efetuadas ======================//
 //#define DEBUG 1
 
@@ -28,7 +28,7 @@
 *
 *@param twaitms  TTempo de espera em milisegundos
 **/
-void waitms(int twaitms)
+char waitms(float twaitms)
 {
     long int deltaT =  0;
     int result;
@@ -51,8 +51,9 @@ void waitms(int twaitms)
     printf("inicial.tv_sec: %lld\n", inicial.tv_sec);
     printf("inicial.tv_nsec: %ld\n", inicial.tv_nsec);
     #endif
-
-    while (deltaT < twaitms*1000){
+    char out ='\0';
+    int twait =(int)twaitms*1000;
+    while (deltaT < twait){
         if((atual.tv_sec-inicial.tv_sec)>0) {// se passou 1 segundo
             deltaT =(atual.tv_nsec/1000)+1000000-inicial.tv_nsec/1000;
         }
@@ -60,12 +61,16 @@ void waitms(int twaitms)
             deltaT =(atual.tv_nsec/1000)-inicial.tv_nsec/1000;
         }
         clock_gettime(clk_id, &atual);
-        
+        out = teclado();
+        if(out =='\n' || out ==27){
+            deltaT = twait+1;
+        }
     }
     #ifdef DEBUG
     printf("atual.tv_sec: %lld\n", atual.tv_sec);
     printf("atual.tv_nsec: %ld\n", atual.tv_nsec);
     #endif
+    return out;
 }
 
 int deltaTempo(int timeOut,struct timespec start){

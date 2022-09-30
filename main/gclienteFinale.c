@@ -1,4 +1,4 @@
-//#define GRAPH 1 
+#define GRAPH 1 
 //===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
 #include <stdio.h>
@@ -23,17 +23,19 @@
 #define DEBUG 1
 
 //====================== Definições efetuadas ======================//
-
+#define TPLANTA 10 //ms
+#define UMAX 70
+#define UINIC 20
 #define BUFFER_SIZE 100
 #define TAM 10
-#define TIMEOUT 300 // milissegundos
+#define TIMEOUT 15 // milissegundos
 //#define NUM_COMM 100
 #define LIN 1000 //2*NUM_COMM  
 #define COL 3
 #define TCTRL 100
-#define TGRAPH 100
-#define REF 50
-
+#define TGRAPH 50
+#define REF 80
+#define LVINIC 40
 typedef struct TPCONTROLE
 {
     long int tempo;
@@ -229,6 +231,7 @@ void* threadGraphClient(void* args)
     int exit =0, ctrl=0, comando=0;
     int hasStarted = 0;
     int atualizarPlot = 0;
+    static long int tempo =0;
     #ifdef GRAPH
     Tdataholder *data;
     //editar posteriormente mas o plot é estado  tanque, válvula, referencia
@@ -245,17 +248,19 @@ void* threadGraphClient(void* args)
         if(pthread_mutex_trylock(&mutexGRAPH)==0){
           INICIARGRAPH = 0;
         // botar o limpar grafico e inicio aqui
+	  tempo=0;
           pthread_mutex_unlock(&mutexGRAPH);
         } 
       }
       if(!INICIARGRAPH){
         if(ATTGRAPH){
+	    tempo +=TGRAPH;
             pthread_mutex_lock(&mutexGRAPH);
             #ifdef GRAPH
-            datadraw(data,(double)CTRL.tempo/1000.0,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
+            datadraw(data,(double)tempo/1000.0,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
             #endif
             #ifndef GRAPH
-            printf("CONTROLE:\tT-%3.3f \tN-%3.3f \t V-%3.3f R-%3.3f\n ",((double)CTRL.tempo/1000.0),(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
+            printf("CONTROLE:\tT-%3.3f \tN-%3.3f \t V-%3.3f R-%3.3f\n ",((double)tempo/1000.0),(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
             #endif
             ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);
@@ -316,7 +321,7 @@ void output_controle(){
     }else if(i==1){
         CTRL.msg.comando = C_C_OPEN;
         CTRL.msg.sequencia = i;//random()%1000;
-        CTRL.msg.valor = 50;
+        CTRL.msg.valor = UINIC;
         CTRL.angulo +=  CTRL.msg.valor; // inicia em 100 dai
         CTRL.flagEnvio = 1;
         
@@ -329,7 +334,7 @@ void output_controle(){
         CTRL.flagEnvio = 0;
         //printf("Buffer %d: %s",i,BUFFER);
         i++;
-        CTRL.tempo+=TCTRL;
+        CTRL.tempo+=TPLANTA;
     }
 }
 
@@ -338,11 +343,11 @@ int bang_bang(int level){
   static int flag_close=0;
   int ang;
   if(level < REF && !flag_open){
-    ang = 100;
+    ang = UMAX;//100;
     flag_open = 1;
     flag_close = 0;
   }else if(level > REF && !flag_close){
-    ang = -100;
+    ang = -UMAX;//100;
     flag_close = 1;
     flag_open = 0;
   }else{
