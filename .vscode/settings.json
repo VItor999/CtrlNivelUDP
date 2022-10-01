@@ -8,6 +8,7 @@
         "protocolo.h": "c",
         "math.h": "c",
         "tempo.h": "c",
-        "graph.h": "c"
+        "graph.h": "c",
+        "types.h": "c"
     }
 }

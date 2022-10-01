@@ -1,2 +1,2 @@
-gcc -o server -pthread -lm -lrt servidortimeout.c #-lSDL para colocar graficos mesmo
+gcc -o server -pthread -lm -lrt -lSDL serverv1.c #-lSDL para colocar graficos mesmo
 ./server 20000

@@ -1,2 +1,2 @@
-gcc -o client -pthread -lrt -lm clientetimeout.c #-lSDL para colocar graficos mesmo
+ gcc -o client -pthread -lrt -lm -lSDL clientv1.c # -lSDL compila com SDL 
 ./client localhost 20000
