@@ -1,4 +1,4 @@
-#define GRAPH 1 
+//#define GRAPH 1 
 //===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
 #include <stdio.h>

@@ -11,7 +11,7 @@
 #include <netdb.h>
 #include <fcntl.h> // para non blocking sockets
 #include "../headers/tempo.h"
-#include "../headers/protocolo.h"
+#include "protocolo.h"
 #include "../headers/kbhit.h"
 #ifdef GRAPH
 #include "../headers/graph.h"
@@ -366,7 +366,7 @@ int bang_bang(int level){
 }
 
 void *threadComm(void *pcli){
-
+    TPMENSAGEM mensagem_send, mensagem_recv;
     int sockfd, portno, rRecv,rSend;
     struct sockaddr_in serv_addr;
     char  *chars;
@@ -387,18 +387,10 @@ void *threadComm(void *pcli){
     int CONT_OUT = 0;
     int confirma = 0;
     int flag_timeout = 0;
-    TPMENSAGEM mensagem_send, mensagem_recv;
+    
     portno = ((PCLIENTE *)pcli)->porta;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    
-    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
-
-    // op
-     struct timeval read_timeout;
-    read_timeout.tv_sec = 1;
-    read_timeout.tv_usec = 0;
-    //era setsockopt(sockfd, IPPROTO_UDP, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
     if (sockfd < 0){
         error("ERROR opening socket");
     }
@@ -411,15 +403,21 @@ void *threadComm(void *pcli){
     }
     bzero((char *)&serv_addr, sizeof(serv_addr)); //zera qualquer coisa
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
+    // Guardar o header no s_addr
+    bcopy((char *)server->h_addr,  
         (char *)&serv_addr.sin_addr.s_addr,
         server->h_length);
+    // Atribui porta de comunicação fornecida
     serv_addr.sin_port = portno;
+    //  tenta conectar
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){ //binding
+        // Encerra se não conectar 
         error("ERROR connecting");
     }
     printf("Servico de comunicação iniciado em thread\n");
-    
+
+    // ESC ou Enter sai fora do programa 
+    // adicionar o Xwindow
     while (OUT!=27 && OUT!='\n'){
         //waitms(WAIT);
         OUT = teclado(); 
@@ -432,19 +430,33 @@ void *threadComm(void *pcli){
                 pthread_mutex_unlock(&mutexCOM);
                 flag_timeout = 0;
             }
+            // Inicializa buffer interno 
             bzero(buffer, BUFFER_SIZE);
+            // Copia Buffer global para a thread
             strcpy(buffer,BUFFER);
+
             printf("Send: %s",buffer);
             //printf("%s\n", buffer);
-            rSend = write(sockfd, buffer, strlen(buffer));
-            if (rSend < 0 && rSend != -1){ //
-                error("ERROR writing to socket");
+            //v rSend = write(sockfd, buffer, strlen(buffer));
+            // Encaminha ao servidor o comando
+            rSend =sendto(sockfd, buffer, strlen(buffer),
+		                0, (const struct sockaddr*)&serv_addr,
+		                sizeof(serv_addr));
+            if (rSend < 0 && rSend != -1){ 
+                // Se o comando não foi enviado é como se não existisse
+                printf("ERRO AO ENVIAR, comando descartado\n");
+                //error("ERROR writing to socket");
             }else{
+                // Se conseguiu enviar guarde  na tabela de comandos enviados
                 mensagem_send = analisarComando(buffer, 1);   
                 if(mensagem_send.comando == C_S_CLOSE || mensagem_send.comando == C_S_OPEN){
                     guarda_comando(mensagem_send); // já escreve na tabela 
                 }
+                // Conseguiu enviar, marque que aguarda uma resposta
+                // Se estiver esperando resposta não mande mais nada
+                // para o servidor até o timeout
                 esperandoResposta = 1;
+                // Liga o timeout
                 clock_gettime(clk_id,&start);  
                 //printf("tempo: %ld\n",start.tv_nsec/1000000);
                 //CONT_OUT++;
@@ -456,7 +468,7 @@ void *threadComm(void *pcli){
         // dou time out 
             //printf("Continuo rodando\n");
             //printf(".");
-            #ifdef AUTO
+           // #ifdef AUTO
             if (deltaTempo(TIMEOUT,start)){
                 esperandoResposta = 0;
                 //if(pthread_mutex_trylock(&mutexCOM)==0){ //REVISAR ISSO ......
@@ -473,7 +485,7 @@ void *threadComm(void *pcli){
                     pthread_mutex_unlock(&mutexCOM);
                 }
             }
-            #endif
+            //#endif
         }
         //FAZER SEMPRE A LEITURA 
         if(!leituraDisponivel && attCOM){//} && !esperandoResposta){
@@ -483,9 +495,11 @@ void *threadComm(void *pcli){
              clock_gettime(clk_id,&clkCOM);
              attCOM =0; // A GARANTIA SOU EU 
         }
-        if (rRecv < 0 && rRecv != -1) // -1 quando não existe nada para ser lido
-            error("ERROR reading from socket");
-        else if (rRecv > 0){ //NOVA MENSAGEM CAPTURADA
+        if (rRecv < 0 && rRecv != -1){ // -1 quando não existe nada para ser lido
+            printf("ERROR reading from socket\n");            
+            //error("ERROR reading from socket");
+
+        }else if (rRecv > 0){ //NOVA MENSAGEM CAPTURADA
             if (!leituraDisponivel){ //primeira vez que tenterei pegar o mutex
                 strcpy(msg,buffer); 
                 if (msg[0]=='\n'){ // desligar servidor 
@@ -493,15 +507,22 @@ void *threadComm(void *pcli){
                 }
                 rRecv =0;
             //}
-            
+                // quebra o retorno do servidor em uma mensagem legível
                 mensagem_recv = analisarComando(msg, 0);
+                // Registra atendimento ao comando anteriormente enviado
                 if(mensagem_recv.comando == C_C_CLOSE || mensagem_recv.comando == C_C_OPEN){
+                    // Só verifica comandos de abertura e fechamento 
+                    // os únicos registrados.
+                    // Zero não encontrou / 1 encontrou 
                     confirma = confirma_comando(mensagem_recv);
                 }else{
-                    confirma = 1;
+                    confirma = 1; // Trata normalmente os demais comandos 
                 }    
+                // Reinicializa para buscar nova resposta se comando retornado 
+                // for igual ao comando enviado 
                 if (confirma){
-                    obterInfo(&MENSAGEM,mensagem_recv); // se é algo valido mando pro mundo
+                    // Publica a mensagem recebida
+                    transfereMsg(&MENSAGEM,mensagem_recv); // se é algo valido mando pro mundo
                     //NOVALEITURA = 1;  //notifica o mundo
                     if((((mensagem_recv.comando+10) == mensagem_send.comando) 
                         && (mensagem_recv.sequencia == mensagem_send.sequencia)) 
@@ -516,18 +537,25 @@ void *threadComm(void *pcli){
             }
             if (pthread_mutex_trylock(&mutexCOM)==0){ // peguei o mutex 
                 if(confirma){
+                    // Informa o mundo que existe algo de interesse 
                     NOVALEITURA = 1;
                 }
+                // Informa o mundo que pode ser escrito algo 
+                // Aguarda o mundo mandar um sinal para ser transmitido
                 NOVAESCRITA = 0;
-                //CONT_OUT++;
+                // A leitura anterior foi tratada
+                // posso ler outra vez 
                 leituraDisponivel = 0;
                 pthread_mutex_unlock(&mutexCOM); // libera o mutex
             }
             else{
+                // A leitura anterior NÃO foi tratada
+                // NÃO posso ler ainda 
                 leituraDisponivel =1;
             }            
         }
     }
+    // Pediu encerramento, encerrar o servidor
     OUT = 27;
     rSend = write(sockfd, "\n", 1);
     close(sockfd);
@@ -573,7 +601,11 @@ void guarda_comando(TPMENSAGEM msg){//escreve na tabela o comando ainda nao conf
 **/
 int confirma_comando(TPMENSAGEM msg){
     int i, encontrou=0;
-    for(i=0;(i<LIN && !encontrou);i++){ //percorre a tabela até achar o comando a ser confirmado
+    for(i=0;(i<LIN && !encontrou);i++){ 
+        //percorre a tabela até achar o comando a ser confirmado
+        // Mais dez pois estou armazenando comandos de servidor
+        // Só entram comandos 5 e 6 -> 15 e 16 na representação 
+        // do servidor
         if(msg.comando+10 == TABELA[i][0] && (msg.sequencia == TABELA[i][1])){// || msg.valor == TABELA[i][2])){//compara comando com seq ou valor
             TABELA[i][0]=VAZIO;
             TABELA[i][1]=VAZIO;

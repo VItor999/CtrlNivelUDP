@@ -6,6 +6,8 @@
         "fcntl.h": "c",
         "kbhit.h": "c",
         "protocolo.h": "c",
-        "math.h": "c"
+        "math.h": "c",
+        "tempo.h": "c",
+        "graph.h": "c"
     }
 }

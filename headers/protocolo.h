@@ -67,7 +67,7 @@
 #define OK "OK"					/** String definir o status OK					**/
 #define VAZIO -99
 #define MAXLEVEL 100
-
+#define uTIMEOUT 500
 /**
 *@brief Contêm as informações de uma mensagem recebida.
 *

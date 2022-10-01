@@ -2,7 +2,7 @@
 // AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
 
 //===================== Bibliotecas utilizadas =====================//
-#define GRAPH 1
+//#define GRAPH 1
 
 #include <pthread.h>
 #include <stdio.h>

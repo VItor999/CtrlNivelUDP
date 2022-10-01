@@ -10,11 +10,11 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fcntl.h> // para non blocking sockets
-#include "../headers/tempo.h"
-#include "../headers/protocolo.h"
-#include "../headers/kbhit.h"
+#include "../../headers/tempo.h"
+#include "../../headers/protocolo.h"
+#include "../../headers/kbhit.h"
 #ifdef GRAPH
-#include "../headers/graph.h"
+#include "../../headers/graph.h"
 #endif
 
 //======================= Definições EXTRAS ========================//
@@ -28,8 +28,7 @@
 #define UINIC 20
 #define BUFFER_SIZE 100
 #define TAM 10
-#define TIMEOUT 15 //  em ms
-#define TIMEBLOCK 10 //em ms
+#define TIMEOUT 15 // milissegundos
 //#define NUM_COMM 100
 #define LIN 1000 //2*NUM_COMM  
 #define COL 3
@@ -37,7 +36,6 @@
 #define TGRAPH 50
 #define REF 80
 #define LVINIC 40
-
 typedef struct TPCONTROLE
 {
     long int tempo;
@@ -110,9 +108,6 @@ int main(int argc, char *argv[]){
     //---- UDP
     PCLIENTE pcliente;
     int sockfd;
-    struct timeval read_timeout;
-    read_timeout.tv_sec = 0;
-    read_timeout.tv_usec = TIMEBLOCK;
     
     //---- Variáveis Auxiliares 
     CTRL.flagEnvio = 1;
@@ -128,7 +123,6 @@ int main(int argc, char *argv[]){
     struct timespec clkGraph;
     clockid_t clk_id = CLOCK_MONOTONIC_RAW;
 
-
      //---- Verificação dos parametros 
     if (argc < 3)
     {
@@ -138,11 +132,8 @@ int main(int argc, char *argv[]){
  
     //---- Captura de dado relevante para o UDP
     pcliente.porta = htons(atoi(argv[2]));
-    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     fcntl(sockfd, F_SETFL, O_NONBLOCK);
-    //https://man7.org/linux/man-pages/man3/setsockopt.3p.html
-    //https://man7.org/linux/man-pages/man0/sys_socket.h.0p.html
-    //https://pubs.opengroup.org/onlinepubs/7908799/xns/netinetin.h.html
     if (sockfd < 0){
         error("ERROR opening socket");
     }
@@ -367,7 +358,7 @@ int bang_bang(int level){
 
 void *threadComm(void *pcli){
 
-    int sockfd, portno, rRecv,rSend;
+    int sockfd, portno, rEnvio,rSend;
     struct sockaddr_in serv_addr;
     char  *chars;
     struct timespec start;
@@ -375,10 +366,6 @@ void *threadComm(void *pcli){
     struct hostent *server;
     // relógio 
     clockid_t clk_id = CLOCK_MONOTONIC_RAW;
-    struct timespec clkCOM;
-    int attCOM =0;
-    clock_gettime(clk_id,&clkCOM);
-
     char buffer[BUFFER_SIZE];
     char msg[BUFFER_SIZE];
     int esperandoResposta = 0;
@@ -390,15 +377,7 @@ void *threadComm(void *pcli){
     TPMENSAGEM mensagem_send, mensagem_recv;
     portno = ((PCLIENTE *)pcli)->porta;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    
-    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
-
-    // op
-     struct timeval read_timeout;
-    read_timeout.tv_sec = 1;
-    read_timeout.tv_usec = 0;
-    //era setsockopt(sockfd, IPPROTO_UDP, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
     if (sockfd < 0){
         error("ERROR opening socket");
     }
@@ -419,11 +398,9 @@ void *threadComm(void *pcli){
         error("ERROR connecting");
     }
     printf("Servico de comunicação iniciado em thread\n");
-    
     while (OUT!=27 && OUT!='\n'){
         //waitms(WAIT);
         OUT = teclado(); 
-        attCOM = deltaTempo(TIMEBLOCK,clkCOM); 
         // Tentar escrever/ ENVIO
         if(NOVAESCRITA && !esperandoResposta && !leituraDisponivel && BUFFER[0]!='\0'){
             if(flag_timeout && pthread_mutex_trylock(&mutexCOM) == 0){
@@ -436,8 +413,8 @@ void *threadComm(void *pcli){
             strcpy(buffer,BUFFER);
             printf("Send: %s",buffer);
             //printf("%s\n", buffer);
-            rSend = write(sockfd, buffer, strlen(buffer));
-            if (rSend < 0 && rSend != -1){ //
+            rEnvio = write(sockfd, buffer, strlen(buffer));
+            if (rEnvio < 0 && rEnvio != -1){ //
                 error("ERROR writing to socket");
             }else{
                 mensagem_send = analisarComando(buffer, 1);   
@@ -476,22 +453,19 @@ void *threadComm(void *pcli){
             #endif
         }
         //FAZER SEMPRE A LEITURA 
-        if(!leituraDisponivel && attCOM){//} && !esperandoResposta){
+        if(!leituraDisponivel){//} && !esperandoResposta){
             //LEITURA OK +- se pegar mutex
             bzero(buffer, BUFFER_SIZE); //leia
-            rRecv = read(sockfd, buffer, BUFFER_SIZE-1); // tentar obter uma nova mensagem
-             clock_gettime(clk_id,&clkCOM);
-             attCOM =0; // A GARANTIA SOU EU 
+            rSend = read(sockfd, buffer, BUFFER_SIZE-1); // tentar obter uma nova mensagem
         }
-        if (rRecv < 0 && rRecv != -1) // -1 quando não existe nada para ser lido
+        if (rSend < 0 && rSend != -1) // -1 quando não existe nada para ser lido
             error("ERROR reading from socket");
-        else if (rRecv > 0){ //NOVA MENSAGEM CAPTURADA
+        else if (rSend > 0){ //NOVA MENSAGEM CAPTURADA
             if (!leituraDisponivel){ //primeira vez que tenterei pegar o mutex
                 strcpy(msg,buffer); 
                 if (msg[0]=='\n'){ // desligar servidor 
                     OUT = 27;
                 }
-                rRecv =0;
             //}
             
                 mensagem_recv = analisarComando(msg, 0);
