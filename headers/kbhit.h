@@ -2,11 +2,13 @@
 *@file kbhit.h
 *@author Lucas Esteves e Vitor Carvalho 
 *@brief Biblioteca auxiliar definida pra a definição do kbhit no linux
-* Bostejo completo aqui
+* 
 *@version 0.1
 *@date 2022-09-18
 *
 **/
+
+//===================== Bibliotecas utilizadas =====================//
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
@@ -16,6 +18,10 @@
 //===================== Cabeçalhos de Funções =====================//
 int kbhit(void);
 char teclado();
+
+//#################################################################//
+//########################   FUNÇÕES   ############################//
+//#################################################################//
 
 /**
  * @brief Implementação do kbhit no UNIX

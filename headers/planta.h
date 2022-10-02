@@ -1,30 +1,52 @@
+/**
+*@file planta.h
+*@author Lucas Esteves e Vitor Carvalho 
+*@brief Arquivo auxiliar com as definições do processo a ser simulado
+*@version 0.1
+*@date 2022-10-02
+*
+**/
+
+//===================== Bibliotecas utilizadas =====================//
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "protocolo.h"
+
 #ifndef planta
 
+//====================== Definições efetuadas ======================//
+#define PARAM 0                         /* Comamndo para atualizar somente os parâmetros da planta*/
+#define CICLO 1                         /* Comando para efetuar somente um ciclo do processo*/
+#define PARAMCICLO 2                    /* Comando para atualizar parâmetros e efetuar um ciclo do porcesso*/
+#define LVINIC 40                       /* Nível incial do tanque */
+#define INANGL 50                       /* Ângulo inicial da válvula*/  
+#define REF 80                          /* Nível de referencia*/
+#define TPLANTA 10 //ms                 /* Taxa de atualização do processo*/
+#define MAXINIC 80                      /* Valor inicial do máximo*/
 
-#define PARAM 0
-#define CICLO 1
-#define PARAMCICLO 2
-
-#define LVINIC 40
-#define INANGL 50
-#define REF 80
-#define TPLANTA 10 //ms
-#define MAXINIC 80
+/**
+*@brief Estrutura que define os elementos necessários para simular o processo
+*
+**/
 typedef struct TPPLANTA
 {
-    long int tempo; /*Tempo em segundos*/
-    int nivel;      /*Nivel em porcentagem 0 -100*/
-    float angIN;      /*Ângulo da válvula de entrada*/ 
-    float angOUT;     /*Ângulo da válvula de saída*/
-    int max;
+    long int tempo;                     /* Tempo em segundos*/
+    int nivel;                          /* Nivel em porcentagem 0 -100*/
+    float angIN;                        /* Ângulo da válvula de entrada*/ 
+    float angOUT;                       /* Ângulo da válvula de saída*/
+    int max;                            /* Valor do máximo*/
 }TPPLANTA;
 
+
+//===================== Cabeçalhos de Funções =====================//
 float outAngle(long int T);
 void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc);
+
+
+//#################################################################//
+//########################   FUNÇÕES   ############################//
+//#################################################################//
 
 /**
 *@brief Atualiza o planta/simulador
@@ -117,6 +139,12 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
     PLANTA->tempo = T;
 }
 
+/**
+*@brief Função que define o angulo de abertura da válvula de perturbação
+*
+*@param T Tempo atual
+*@return float angulo da perturbação
+**/
 float outAngle(long int T)
 {
     if (T <= 0)

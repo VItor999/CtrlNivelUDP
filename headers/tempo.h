@@ -17,7 +17,9 @@
 //#define DEBUG 1
 
 #ifndef temporizacao
-
+//===================== Cabeçalhos de Funções =====================//
+void waitms(float twaitms);
+int deltaTempo(int timeOut,struct timespec start);
 
 //#################################################################//
 //########################   FUNÇÕES   ############################//
@@ -26,9 +28,9 @@
 /**
 *@brief Função para esperar por milisegundos (qualquer valor entre 0-999)
 *
-*@param twaitms  TTempo de espera em milisegundos
+*@param twaitms  Tempo de espera em milisegundos
 **/
-char waitms(float twaitms)
+void waitms(float twaitms)
 {
     long int deltaT =  0;
     int result;
@@ -51,7 +53,7 @@ char waitms(float twaitms)
     printf("inicial.tv_sec: %lld\n", inicial.tv_sec);
     printf("inicial.tv_nsec: %ld\n", inicial.tv_nsec);
     #endif
-    char out ='\0';
+    //char out ='\0';
     int twait =(int)twaitms*1000;
     while (deltaT < twait){
         if((atual.tv_sec-inicial.tv_sec)>0) {// se passou 1 segundo
@@ -61,18 +63,25 @@ char waitms(float twaitms)
             deltaT =(atual.tv_nsec/1000)-inicial.tv_nsec/1000;
         }
         clock_gettime(clk_id, &atual);
-        out = teclado();
-        if(out =='\n' || out ==27){
-            deltaT = twait+1;
-        }
+        //out = teclado();
+       // if(out =='\n' || out ==27){
+       //     deltaT = twait+1;
+       // }
     }
     #ifdef DEBUG
     printf("atual.tv_sec: %lld\n", atual.tv_sec);
     printf("atual.tv_nsec: %ld\n", atual.tv_nsec);
     #endif
-    return out;
+    return;
 }
 
+/**
+*@brief Função para informar se determinador delta T já ocorreu
+*
+*@param timeOut Tempo limite
+*@param start  Relógio base iniciado externamente
+*@return int 
+**/
 int deltaTempo(int timeOut,struct timespec start){
     long int deltaT = 0;
     struct timespec atual;

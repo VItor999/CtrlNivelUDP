@@ -1,4 +1,14 @@
+/**
+*@file clientv1.c
+*@author Lucas Esteves e Vitor Carvalho 
+*@brief  Código fonte do Cliente do trabalho 4 
+*@version 1
+*@date 2022-10-02
+*
+**/
+
 //#define GRAPH 1 
+
 //===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
 #include <stdio.h>
@@ -18,33 +28,37 @@
 #endif
 
 //======================= Definições EXTRAS ========================//
-#define AUTO 1
+//#define AUTO 1
 //#define RAND 1
 #define DEBUG 1
 
 //====================== Definições efetuadas ======================//
-#define TPLANTA 10 //ms
-#define UMAX 70
-#define UINIC 20
-#define BUFFER_SIZE 100
-#define TAM 10
-#define TIMEOUT 15 // milissegundos
-//#define NUM_COMM 100
-#define LIN 1000 //2*NUM_COMM  
-#define COL 3
-#define TCTRL 100
-#define TGRAPH 50
-#define REF 80
-#define LVINIC 40
+#define TPLANTA 10                                /* Tempo de atualização do processo da planta em MS*/
 
+#define TIMEOUT 15 // milissegundos               /* Tempo de TIMEOUT de um pacote em ms*/
+#define TCTRL 100                                 /* Tempo de Atualização da thread de controle*/
+#define TGRAPH 50                                 /* Tempo de Atualização da thread gráfica*/
+//#define NUM_COMM 100
+#define BUFFER_SIZE 100  //colocar no protocolo?  /* Tamanho do buffer*/
+#define TAM 10                                    /* Tamanho do buffer auxiliar*/
+#define LIN 1000 //2*NUM_COMM                     /* Número de linhas da tabela de comunicação*/ // futuramente colocar como dinâmica
+#define COL 3                                     /* Número de colunas da tabela de comunição*/
+#define UMAX 70                                   /* Valor do sinal de controle máximo incial*/
+#define UINIC 20                                  /* Valor do sinal de controle inicial*/
+#define REF 80                                    /* Valor da referencia*/
+#define LVINIC 40                                 /* Valor do nível da referência*/
+
+/**
+*@brief Struc que contém os dados úteis para controle do processo
+*
+**/
 typedef struct TPCONTROLE
 {
-    long int tempo;
-    float angulo;
-    int nivel;
-    int flagEnvio;
+    long int tempo;                               /* Tempo da rotina de controle*/
+    float angulo;                                 /* Ângulo de abertura da válvula (0-100)*/
+    int nivel;                                    /* Nivel atual */
+    int flagEnvio;                                /* Status do envio de comando */
     TPMENSAGEM msg;
-    /* data */
 }TPCONTROLE;
 
 //======================= Variáveis Globais  ======================//
@@ -309,7 +323,7 @@ void *threadComm(void *pcli){
         // dou time out 
             //printf("Continuo rodando\n");
             //printf(".");
-            #ifdef AUTO
+            //#ifdef AUTO
             if (deltaTempo(TIMEOUT,start)){
                 esperandoResposta = 0;
                 //if(pthread_mutex_trylock(&mutexCOM)==0){ //REVISAR ISSO ......
@@ -326,7 +340,7 @@ void *threadComm(void *pcli){
                     pthread_mutex_unlock(&mutexCOM);
                 }
             }
-            #endif
+            //#endif
         }
         //FAZER SEMPRE A LEITURA 
         if(!leituraDisponivel){//} && !esperandoResposta){
@@ -358,9 +372,9 @@ void *threadComm(void *pcli){
                         || mensagem_recv.comando == C_S_ERRO){
                         //printf("\tRECV: %s\n", buffer);
                         esperandoResposta = 0;
-                        #ifndef AUTO
-                        printf("\n");
-                        #endif
+                        //#ifndef AUTO
+                        //printf("\n");
+                        //#endif
                     }   
                 }
             }
