@@ -7,7 +7,7 @@
 *
 **/
 
-//#define GRAPH 1 
+#define GRAPH 1 
 
 //===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
@@ -444,7 +444,6 @@ void* threadGraphClient(void* args)
       #endif
     }
     printf("FIM GRAFICO\n");
-    return;
 }
 
 void input_controle(){

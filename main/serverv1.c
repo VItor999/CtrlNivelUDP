@@ -9,7 +9,7 @@
 **/
 
 //===================== Bibliotecas utilizadas =====================//
-//#define GRAPH 1                               //comentar para desabilitar gráficos 
+#define GRAPH 1                               //comentar para desabilitar gráficos 
 
 #include <pthread.h>
 #include <stdio.h>
@@ -416,7 +416,6 @@ void* threadGraph(void* args)
       #endif
     }
     printf("FIM GRAFICO\n");
-    return;
 }
 
 /**

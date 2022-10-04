@@ -1,2 +1,2 @@
-gcc -o server -pthread -lm -lrt -lSDL serverv1.c #-lSDL para colocar graficos mesmo
+gcc serverv1.c -o server -pthread -lm -lrt -lSDL #-lSDL para colocar graficos mesmo
 ./server 20000

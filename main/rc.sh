@@ -1,2 +1,2 @@
- gcc -o client -pthread -lrt -lm -lSDL clientv1.c # -lSDL compila com SDL 
+gcc client.c -o client -pthread -lm -lrt -lSDL  # -lSDL compila com SDL 
 ./client localhost 20000

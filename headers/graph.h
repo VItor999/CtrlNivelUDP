@@ -43,12 +43,22 @@ typedef struct dataholder {
 
 } Tdataholder;
 
-inline void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
+ void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color);
+ void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color);
+ void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color);
+ void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color);
+Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax);
+Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lcurrent, double INcurrent, double OUTcurrent);
+void setdatacolors(Tdataholder *data, PixelType Lcolor, PixelType INcolor, PixelType OUTcolor);
+void datadraw(Tdataholder *data, double time, double level, double inangle, double outangle);
+void quitevent();
+
+ void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
 {
   *( ((PixelType*)canvas->canvas->pixels) + ((-y+canvas->Yoffset) * canvas->canvas->w + x+ canvas->Xoffset)) = color;
 }
 
-inline void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
+ void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
 {
   int offset =  (-y+canvas->Yoffset) * canvas->canvas->w;
   int x;
@@ -58,7 +68,7 @@ inline void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
   }
 }
 
-inline void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
+ void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
 {
   int offset = x+canvas->Xoffset;
   int y;
@@ -69,7 +79,7 @@ inline void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
   }
 }
 
-inline void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color) {
+ void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color) {
   double x;
 
   for (x=x0; x<=x1; x+=canvas->Xstep) {
