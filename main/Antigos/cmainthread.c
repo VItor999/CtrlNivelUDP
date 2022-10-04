@@ -261,7 +261,7 @@ int main(int argc, char *argv[]){
        
     }
     //---- Encerrando
-    pthread_join(pthComm, NULL);
+    //pthread_join(pthComm, NULL);
     printf("Encerrando main, CONT_OUT:%d\n\n",CONT_OUT);
     #ifdef DEBUG
     imprime_tabela();

@@ -289,8 +289,8 @@ void *threadComm(void *pcli){
     }
     printf("Servico de comunicação iniciado em thread\n");
     while (OUT!=27 && OUT!='\n'){
-        //waitms(WAIT);
-        OUT = teclado(); 
+        // waitms(WAIT);
+        // OUT = teclado(); 
         // Tentar escrever/ ENVIO
         if(NOVAESCRITA && !esperandoResposta && !leituraDisponivel && BUFFER[0]!='\0'){
             if(flag_timeout && pthread_mutex_trylock(&mutexCOM) == 0){
