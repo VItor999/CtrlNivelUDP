@@ -408,7 +408,7 @@ void* threadGraphClient(void* args)
     #ifdef GRAPH
     Tdataholder *data;
     //editar posteriormente mas o plot é estado  tanque, válvula, referencia
-    data = datainit(1000,500,150,120,(double)LVINIC,(double)50,(double)REF);
+    data = datainit(640,480,150,120,(double)LVINIC,(double)50,(double)REF);
     #endif
     pthread_mutex_lock(&mutexGRAPH); 
     #ifdef GRAPH
@@ -416,27 +416,37 @@ void* threadGraphClient(void* args)
     #endif
     pthread_mutex_unlock(&mutexGRAPH);
     printf("Thread Gráfica Iniciada\n");
+    tempo=0;
+    int taux;
     while(OUT != 27){
       if(INICIARGRAPH){  // se não comecei -> o importante é ver se tenho que começar
         if(pthread_mutex_trylock(&mutexGRAPH)==0){
           INICIARGRAPH = 0;
         // botar o limpar grafico e inicio aqui
-	  tempo=0;
+           if (tempo!=0){
+             Restart(640,480,150,120,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF,data);
+           }
           pthread_mutex_unlock(&mutexGRAPH);
         } 
       }
       if(!INICIARGRAPH){
         if(ATTGRAPH){
-	    tempo +=TGRAPH;
+	        tempo +=TGRAPH;
+            taux = tempo%150000;
             pthread_mutex_lock(&mutexGRAPH);
             #ifdef GRAPH
-            datadraw(data,(double)tempo/1000.0,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
+            datadraw(data,(double)taux/1000.0,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
             #endif
             #ifndef GRAPH
             printf("CONTROLE:\tT-%3.3f \tN-%3.3f \t V-%3.3f R-%3.3f\n ",((double)tempo/1000.0),(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
             #endif
             ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);
+             if ((taux)==0){
+              INICIARGRAPH =1;
+              taux =0;
+            }
+            printf("%ld\n",tempo);
         }
       }
       #ifdef GRAPH

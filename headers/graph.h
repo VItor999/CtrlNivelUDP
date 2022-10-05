@@ -43,6 +43,7 @@ typedef struct dataholder {
 
 } Tdataholder;
 
+
  void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color);
  void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color);
  void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color);
@@ -52,6 +53,7 @@ Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lc
 void setdatacolors(Tdataholder *data, PixelType Lcolor, PixelType INcolor, PixelType OUTcolor);
 void datadraw(Tdataholder *data, double time, double level, double inangle, double outangle);
 void quitevent();
+void Restart(int Width, int Height, double Xmax, double Ymax,double Lcurrent, double INcurrent, double OUTcurrent, Tdataholder *data);
 
  void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
 {
@@ -123,6 +125,43 @@ Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
   }
 
   return canvas;
+}
+
+void Restart(int Width, int Height, double Xmax, double Ymax,double Lcurrent, double INcurrent, double OUTcurrent, Tdataholder *data) {
+  int x,y;
+  data->Tcurrent=0;
+   bzero(data->canvas, sizeof(Tcanvas));
+  data->canvas->Xoffset = 10;
+  data->canvas->Yoffset = Height;
+
+  data->canvas->Xext = 10;
+  data->canvas->Yext = 10;
+
+
+
+  data->canvas->Height = Height;
+  data->canvas->Width  = Width; 
+  data->canvas->Xmax   = Xmax;
+  data->canvas->Ymax   = Ymax;
+
+  data->canvas->Xstep  = Xmax/(double)Width/2;
+  data->canvas->canvas = SDL_SetVideoMode(data->canvas->Width+data->canvas->Xext,
+                                         data->canvas->Height+data->canvas->Yext,
+                                           BPP, SDL_SWSURFACE); 
+  c_hlinedraw(data->canvas, 1, 0, (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 255,  255));
+  for (y=10;y<Ymax;y+=10) {
+    c_hlinedraw(data->canvas, 3, y*Height/Ymax , (PixelType) SDL_MapRGB(data->canvas->canvas->format,  220, 220,  220));
+  }
+  c_vlinedraw(data->canvas, 0, 1, (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 255,  255));
+  for (x=10;x<Xmax;x+=10) {
+    c_vlinedraw(data->canvas, x*Width/Xmax, 3, (PixelType) SDL_MapRGB(data->canvas->canvas->format,  220, 220,  220));
+  }
+  data->Lcurrent=Lcurrent;
+  data->Lcolor= (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 180,  0);
+  data->INcurrent=INcurrent;
+  data->INcolor=(PixelType) SDL_MapRGB(data->canvas->canvas->format,  180, 255,  0);
+  data->OUTcurrent=OUTcurrent;
+  data->OUTcolor=(PixelType) SDL_MapRGB(data->canvas->canvas->format,  0, 180,  255);
 }
 
 Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lcurrent, double INcurrent, double OUTcurrent) {

@@ -363,7 +363,7 @@ void* threadGraph(void* args)
     static int tempo =0;
     #ifdef GRAPH
     Tdataholder *data;
-    data = datainit(1000,500,150,120,(double)LVINIC,(double)0,(double)0);
+    data = datainit(640,480,150,120,(double)LVINIC,(double)0,(double)0);
     #endif
     pthread_mutex_lock(&mutexGRAPH); 
     #ifdef GRAPH
@@ -371,46 +371,38 @@ void* threadGraph(void* args)
     #endif
     pthread_mutex_unlock(&mutexGRAPH);
     printf("Thread Gráfica Iniciada\n");
+    tempo =0;
+    int taux;
     while(OUT != 27){
       if(INICIARGRAPH){  // se não comecei -> o importante é ver se tenho que começar
         if(pthread_mutex_trylock(&mutexGRAPH)==0){
           INICIARGRAPH = 0;
         // botar o limpar grafico e inicio aqui
-	  tempo =0;
+          Restart(640,480,150,120,(double)LVINIC,(double)0,(double)0,data);
           pthread_mutex_unlock(&mutexGRAPH);
         } 
       }
       if(!INICIARGRAPH){
         if(ATTGRAPH){
-	    tempo+= TGRAPH;
+	          tempo+= TGRAPH;
+            taux = tempo%150000;
             pthread_mutex_lock(&mutexGRAPH);
             #ifdef GRAPH
-            datadraw(data,(double)tempo/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
+            datadraw(data,(double)taux/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
             #endif
             #ifndef GRAPH
             printf("PLANTA:\tT-%6ld\tN-%3d\tV-%3.3f\tP-%3.3f\n",tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
             #endif
             ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);
+            
+            if ((taux)==0){
+              INICIARGRAPH =1;
+              taux =0;
+            }
+            printf("%ld\n",tempo);
         }
       }
-     // ISSO TEM Q IR POR CLIENTE
-      /*
-      angulo = controle(PLANTASIM.nivel);
-      //printf("ang:%d\t",angulo);
-      if(angulo==-100){
-	      MENSAGEM.comando = C_S_CLOSE;
-	      MENSAGEM.valor=-angulo;
-      }else if(angulo==100){
-	      MENSAGEM.comando = C_S_OPEN;
-	      MENSAGEM.valor=angulo;
-      }else{
-	      MENSAGEM.comando = angulo;
-      }
-      if (PLANTASIM.nivel ==0) exit =1; 
-     
-      pthread_mutex_unlock(&mutexGRAPH);
-      */
       #ifdef GRAPH
       quitevent();
       #endif
