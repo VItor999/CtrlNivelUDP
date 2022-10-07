@@ -29,7 +29,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 ### Sem gráfico
 1. Navegue para o diretorio *main*
 2. Abra os arquivos *server.c* e *client.c*
-3. Comente, em cada um o `#define GRAPH 1` (linha **11** em ambos os arquivos) utilizando `//`
+3. Comente, em cada um dos arquivos, o comando `#define GRAPH 1` (linha **11** em ambos os arquivos) utilizando `//`
 4. Compile o servidor utilizando os seguintes comandos: `gcc server.c -o server -pthread -lm -lrt`
 5. Compile o cliente utilizando os seguintes comandos: `gcc client.c -o client -pthread -lm -lrt`
 6. Inicie o servidor rodando o comando `./server <porta>`
