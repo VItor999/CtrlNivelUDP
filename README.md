@@ -19,7 +19,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 
 1. Navegue para o diretorio *main* e execute  o arquivo *comp.sh*
 2. Inicie o servidor rodando o comando `./server <porta>`
-3. Inicie o cliente rodando o comando `./server <serverIP> <porta>`
+3. Inicie o cliente rodando o comando `./client <serverIP> <porta>`
 4. Encerre a janela gráfica do cliente para encerrar ambos os programas simultâneamente
 
 #### Problemas comuns 
@@ -33,5 +33,5 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 4. Compile o servidor utilizando os seguintes comandos: `gcc server.c -o server -pthread -lm -lrt`
 5. Compile o cliente utilizando os seguintes comandos: `gcc client.c -o client -pthread -lm -lrt`
 6. Inicie o servidor rodando o comando `./server <porta>`
-7. Inicie o cliente rodando o comando `./server <serverIP> <porta>`
+7. Inicie o cliente rodando o comando `./client <serverIP> <porta>`
 8. Pressione ESC no cliente para encerar ambos os programas simultâneamente
