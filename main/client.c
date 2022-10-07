@@ -7,9 +7,9 @@
 *
 **/
 
+//===================== Bibliotecas utilizadas =====================//
 #define GRAPH 1 
 
-//===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
