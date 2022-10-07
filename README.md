@@ -24,7 +24,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 
 #### Problemas comuns 
 - Caso seja necessário, habilite as permissões para o *script* executando o comando: `chmod +x bash.sh`
-- Caso a biblioteca SDL 1.2 não esteja sendo encontrada, ela pode ser facilmente instalada em distribuições que utilizam o gerenciador de pacotes apt utilizando o seguinte comando: 'sudo apt install libsdl1.2-dev'
+- Caso a biblioteca SDL 1.2 não esteja sendo encontrada, ela pode ser facilmente instalada em distribuições que utilizam o gerenciador de pacotes **apt** utilizando o seguinte comando: `sudo apt install libsdl1.2-dev`
 
 ### Sem gráfico
 1. Navegue para o diretorio *main*
