@@ -1,4 +1,14 @@
-//#define GRAPH 1 
+/**
+*@file clientv1.c
+*@author Lucas Esteves e Vitor Carvalho 
+*@brief  Código fonte do Cliente do trabalho 4 
+*@version FINAL
+*@date 2022-10-02
+*
+**/
+
+#define GRAPH 1 
+
 //===================== Bibliotecas utilizadas =====================//
 #include <pthread.h>
 #include <stdio.h>
@@ -18,30 +28,37 @@
 #endif
 
 //======================= Definições EXTRAS ========================//
-#define AUTO 1
+//#define AUTO 1
 //#define RAND 1
 #define DEBUG 1
 
 //====================== Definições efetuadas ======================//
+#define TPLANTA 10                                /* Tempo de atualização do processo da planta em MS*/
 
-#define BUFFER_SIZE 100
-#define TAM 10
-#define TIMEOUT 300 // milissegundos
+#define TIMEOUT 15 // milissegundos               /* Tempo de TIMEOUT de um pacote em ms*/
+#define TCTRL 100                                 /* Tempo de Atualização da thread de controle*/
+#define TGRAPH 50                                 /* Tempo de Atualização da thread gráfica*/
 //#define NUM_COMM 100
-#define LIN 1000 //2*NUM_COMM  
-#define COL 3
-#define TCTRL 100
-#define TGRAPH 100
-#define REF 50
+#define BUFFER_SIZE 100  //colocar no protocolo?  /* Tamanho do buffer*/
+#define TAM 10                                    /* Tamanho do buffer auxiliar*/
+#define LIN 5000 //2*NUM_COMM                     /* Número de linhas da tabela de comunicação*/ // futuramente colocar como dinâmica
+#define COL 3                                     /* Número de colunas da tabela de comunição*/
+#define UMAX 70                                   /* Valor do sinal de controle máximo incial*/
+#define UINIC 20                                  /* Valor do sinal de controle inicial*/
+#define REF 80                                    /* Valor da referencia*/
+#define LVINIC 40                                 /* Valor do nível da referência*/
 
+/**
+*@brief Struc que contém os dados úteis para controle do processo
+*
+**/
 typedef struct TPCONTROLE
 {
-    long int tempo;
-    float angulo;
-    int nivel;
-    int flagEnvio;
+    long int tempo;                               /* Tempo da rotina de controle*/
+    float angulo;                                 /* Ângulo de abertura da válvula (0-100)*/
+    int nivel;                                    /* Nivel atual */
+    int flagEnvio;                                /* Status do envio de comando */
     TPMENSAGEM msg;
-    /* data */
 }TPCONTROLE;
 
 //======================= Variáveis Globais  ======================//
@@ -58,11 +75,13 @@ int NOVALEITURA = 0;
 int NOVAESCRITA = 0;
 char BUFFER[BUFFER_SIZE]={0};
 TPCONTROLE CTRL;
+int INICIARGRAPH =0;
+int ATTGRAPH =0;
 #ifdef DEBUG
 int CONTRUIM = 0;
 #endif 
 //===================== Cabeçalhos de Funções =====================//
-
+void *threadGraphClient(void* args);
 void *threadComm(void *pcli);
 void error(const char *msg);
 //void simula_comm(char buffer[]);
@@ -74,6 +93,7 @@ void responde_servidor(TPMENSAGEM msg, char ans[]);
 int bang_bang(int level);
 void input_controle();
 void output_controle();
+void tryExit();
 
 /**
 *@brief Parametros do cliente
@@ -99,22 +119,22 @@ int main(int argc, char *argv[]){
 
     //---- Threads 
      pthread_t pthComm;       
-  
+    pthread_t pthGraph;   
 
+    //---- UDP
     PCLIENTE pcliente;
     int sockfd;
- 
+    
     //---- Variáveis Auxiliares 
     CTRL.flagEnvio = 1;
-    int r;
+    CTRL.angulo =50;
+    int r1,r2;
     int CONT_OUT=0;
     int flag_ctrl = 0;
 
+    //---- Temporização 
     int attCtrl = 0;
-    int attGraph = 0;
     struct timespec clkCtrl;
-    struct timespec clkGraph;
-    long int deltaT = 0;
     clockid_t clk_id = CLOCK_MONOTONIC_RAW;
 
      //---- Verificação dos parametros 
@@ -124,6 +144,7 @@ int main(int argc, char *argv[]){
         exit(0);
     }
  
+    //---- Captura de dado relevante para o UDP
     pcliente.porta = htons(atoi(argv[2]));
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     fcntl(sockfd, F_SETFL, O_NONBLOCK);
@@ -134,20 +155,26 @@ int main(int argc, char *argv[]){
   
     //---- Cria e  Testa a thread
     printf("Cliente Inicializado, parabens\n");
-    r = pthread_create(&pthComm, NULL, threadComm, (void *)&pcliente);
-    if (r){
-        fprintf(stderr, "Error - pthread_create() return code: %d\n",  r);
+    r1 = pthread_create(&pthComm, NULL, threadComm, (void *)&pcliente);
+    if (r1){
+        fprintf(stderr, "Error - pthread_create() COMM return code: %d\n",  r2);
         exit(EXIT_FAILURE);
     }
+     r2 =pthread_create( &pthGraph, NULL, threadGraphClient, NULL);
+    if(r2)
+    {
+        fprintf(stderr, "Error - pthread_create() GRAPH return code: %d\n",  r2);
+        exit(EXIT_FAILURE);
+    }
+
      //---- LOOP principal
  
     clock_gettime(clk_id,&clkCtrl);
-    clock_gettime(clk_id,&clkGraph);
+    
 
     while (OUT != 27){ // pressionando esq encerro o server
         // Variavel OUT é caputara dela thread que está sempre operando -> COMM
         attCtrl = deltaTempo(TCTRL,clkCtrl);
-        //attGraph = deltaTempo(TGRAPH,clkGraph);
         if (!NOVAESCRITA){
             /*if(CONT_OUT==NUM_COMM){
                 NOVAESCRITA = 0;
@@ -155,7 +182,9 @@ int main(int argc, char *argv[]){
                 //simula_comm(BUFFER); //escreve no buffer global para enviar
                 
             if(attCtrl){
+                pthread_mutex_lock(&mutexGRAPH);
                 output_controle();
+                pthread_mutex_unlock(&mutexGRAPH);
                 clock_gettime(clk_id,&clkCtrl);
                 //NOVAESCRITA = 1;
                 flag_ctrl = 1;
@@ -180,14 +209,15 @@ int main(int argc, char *argv[]){
             || MENSAGEM.comando == C_C_CLOSE || MENSAGEM.comando == C_S_ERRO){
                 //AQUI VAI UM LOCK DO MUTEX GRAFICO 
                 //CHAMAR ATUALIZACAO DO CONTROLE AQUI
+                pthread_mutex_lock(&mutexGRAPH);
                 input_controle();
+                pthread_mutex_unlock(&mutexGRAPH);
             }
             if(pthread_mutex_trylock(&mutexCOM)==0){    
                 NOVALEITURA = 0;
                 pthread_mutex_unlock(&mutexCOM);
             }
         }
-       
     }
     //---- Encerrando
     pthread_join(pthComm, NULL);
@@ -197,77 +227,6 @@ int main(int argc, char *argv[]){
     printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
     #endif
     return 0;
-}
-
-void input_controle(){
-    int angulo;
-
-    if(MENSAGEM.comando == C_C_GET){
-        CTRL.nivel = MENSAGEM.valor;
-
-        angulo = bang_bang(CTRL.nivel);
-        if(angulo<0){
-            CTRL.msg.comando = C_C_CLOSE;
-            angulo = -angulo;
-        }else if(angulo>0){
-            CTRL.msg.comando = C_C_OPEN;
-        }else{
-            CTRL.msg.comando = C_C_OPEN;
-        }
-        CTRL.msg.valor = angulo;
-
-    }else if(MENSAGEM.comando == C_C_OPEN || MENSAGEM.comando == C_C_CLOSE){
-        CTRL.msg.comando = C_C_GET;
-        CTRL.msg.valor = VAZIO;
-    
-    }else{
-        printf("ERRO ");//, PENSAR NO QUE FAZER, APENAS RETRANSMITE\n");
-    }
-    CTRL.flagEnvio = 1;
-}
-
-void output_controle(){
-    static int i = 0;
-    if(i==0){
-        CTRL.msg.comando = C_C_START;
-        CTRL.msg.sequencia = i;//random()%1000;
-        CTRL.msg.valor = VAZIO;
-        CTRL.flagEnvio = 1;
-        
-    }else if(i==1){
-        CTRL.msg.comando = C_C_OPEN;
-        CTRL.msg.sequencia = i;//random()%1000;
-        CTRL.msg.valor = 50;
-        CTRL.flagEnvio = 1;
-        
-    }
-    
-    if(CTRL.flagEnvio){
-        bzero(BUFFER, BUFFER_SIZE);
-        CTRL.msg.sequencia = i;
-        responde_servidor(CTRL.msg, BUFFER);
-        CTRL.flagEnvio = 0;
-        //printf("Buffer %d: %s",i,BUFFER);
-        i++;
-    }
-}
-
-int bang_bang(int level){
-  static int flag_open=1;
-  static int flag_close=0;
-  int ang;
-  if(level < REF && !flag_open){
-    ang = 100;
-    flag_open = 1;
-    flag_close = 0;
-  }else if(level > REF && !flag_close){
-    ang = -100;
-    flag_close = 1;
-    flag_open = 0;
-  }else{
-    ang = 0;
-  }
-  return ang;
 }
 
 void *threadComm(void *pcli){
@@ -291,7 +250,12 @@ void *threadComm(void *pcli){
     TPMENSAGEM mensagem_send, mensagem_recv;
     portno = ((PCLIENTE *)pcli)->porta;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    fcntl(sockfd, F_SETFL, O_NONBLOCK);
+    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
+    struct timeval read_timeout;
+    read_timeout.tv_sec = 0;
+    read_timeout.tv_usec = uTIMEOUT;
+    //era setsockopt(sockfd, IPPROTO_UDP, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
     if (sockfd < 0){
         error("ERROR opening socket");
     }
@@ -313,8 +277,6 @@ void *threadComm(void *pcli){
     }
     printf("Servico de comunicação iniciado em thread\n");
     while (OUT!=27 && OUT!='\n'){
-        //waitms(WAIT);
-        OUT = teclado(); 
         // Tentar escrever/ ENVIO
         if(NOVAESCRITA && !esperandoResposta && !leituraDisponivel && BUFFER[0]!='\0'){
             if(flag_timeout && pthread_mutex_trylock(&mutexCOM) == 0){
@@ -325,7 +287,7 @@ void *threadComm(void *pcli){
             }
             bzero(buffer, BUFFER_SIZE);
             strcpy(buffer,BUFFER);
-            printf("Send: %s",buffer);
+            //printf("Send: %s",buffer);
             //printf("%s\n", buffer);
             rEnvio = write(sockfd, buffer, strlen(buffer));
             if (rEnvio < 0 && rEnvio != -1){ //
@@ -347,7 +309,7 @@ void *threadComm(void *pcli){
         // dou time out 
             //printf("Continuo rodando\n");
             //printf(".");
-            #ifdef AUTO
+            //#ifdef AUTO
             if (deltaTempo(TIMEOUT,start)){
                 esperandoResposta = 0;
                 //if(pthread_mutex_trylock(&mutexCOM)==0){ //REVISAR ISSO ......
@@ -364,7 +326,7 @@ void *threadComm(void *pcli){
                     pthread_mutex_unlock(&mutexCOM);
                 }
             }
-            #endif
+            //#endif
         }
         //FAZER SEMPRE A LEITURA 
         if(!leituraDisponivel){//} && !esperandoResposta){
@@ -394,11 +356,11 @@ void *threadComm(void *pcli){
                     if((((mensagem_recv.comando+10) == mensagem_send.comando) 
                         && (mensagem_recv.sequencia == mensagem_send.sequencia)) 
                         || mensagem_recv.comando == C_S_ERRO){
-                        printf("\tRECV: %s\n", buffer);
+                        //printf("\tRECV: %s\n", buffer);
                         esperandoResposta = 0;
-                        #ifndef AUTO
-                        printf("\n");
-                        #endif
+                        //#ifndef AUTO
+                        //printf("\n");
+                        //#endif
                     }   
                 }
             }
@@ -421,6 +383,157 @@ void *threadComm(void *pcli){
     close(sockfd);
     printf("\n\nEncerrando threadCOM\n\n");
     return 0;
+}
+
+void* threadGraphClient(void* args)
+{
+    int exit =0, ctrl=0, comando=0;
+    int hasStarted = 0;
+    int atualizarPlot = 0;
+    static long int tempo =0;
+    #ifdef GRAPH
+    Tdataholder *data;
+    //editar posteriormente mas o plot é estado  tanque, válvula, referencia
+    data = datainit(640,480,150,120,(double)LVINIC,(double)50,(double)REF);
+    #endif
+    pthread_mutex_lock(&mutexGRAPH); 
+    #ifdef GRAPH
+    datadraw(data,(double)CTRL.tempo/1000.0,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
+    #endif
+    pthread_mutex_unlock(&mutexGRAPH);
+    printf("Thread Gráfica Iniciada\n");
+    tempo=0;
+    int taux;
+    int attGraph =0;
+    struct timespec clkGraph;
+    clockid_t clk_id = CLOCK_MONOTONIC_RAW;
+    clock_gettime(clk_id,&clkGraph);
+    int rodar =0 ;
+    while(OUT != 27){
+      if(INICIARGRAPH || rodar ==-1){  // se não comecei -> o importante é ver se tenho que começar
+        if(pthread_mutex_trylock(&mutexGRAPH)==0){
+          INICIARGRAPH = 0;
+          rodar =1;
+        // botar o limpar grafico e inicio aqui
+          Restart(640,480,150,120,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF,data);
+          pthread_mutex_unlock(&mutexGRAPH);
+        } 
+      }
+      if(!INICIARGRAPH){
+          attGraph = deltaTempo(TGRAPH,clkGraph);
+        if(attGraph){
+	        tempo +=TGRAPH;
+            taux = tempo%150000;
+            pthread_mutex_lock(&mutexGRAPH);
+            #ifdef GRAPH
+            datadraw(data,(double)taux/1000.0,(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
+            #endif
+            #ifndef GRAPH
+            printf("CONTROLE:\tT-%3.3f \tN-%3.3f \t V-%3.3f R-%3.3f\n ",((double)tempo/1000.0),(double)CTRL.nivel,(double)CTRL.angulo,(double)REF);
+            #endif
+             pthread_mutex_unlock(&mutexGRAPH);
+             if ((taux)==0){
+              rodar = -1;
+              taux =0;
+            }
+            tryExit();
+            clock_gettime(clk_id,&clkGraph);
+        }
+      }
+      else{
+        tryExit();
+      }
+    }
+    printf("FIM GRAFICO\n");
+}
+
+void tryExit(){
+    //OUT = teclado(); 
+    #ifdef GRAPH
+    quitevent(&OUT);
+    #endif
+}
+
+void input_controle(){
+    int angulo;
+
+    if(MENSAGEM.comando == C_C_GET){
+        CTRL.nivel = MENSAGEM.valor;
+
+        angulo = bang_bang(CTRL.nivel);
+        if(angulo<0){
+            CTRL.msg.comando = C_C_CLOSE;
+            CTRL.angulo+=angulo;
+            angulo = -angulo;
+        }else if(angulo>0){
+            CTRL.msg.comando = C_C_OPEN;
+            CTRL.angulo+=angulo;
+        }else{
+            CTRL.msg.comando = C_C_OPEN;
+        }
+        CTRL.msg.valor = angulo;
+
+    }else if(MENSAGEM.comando == C_C_OPEN || MENSAGEM.comando == C_C_CLOSE){
+        CTRL.msg.comando = C_C_GET;
+        CTRL.msg.valor = VAZIO;
+    
+    }else if (MENSAGEM.comando == C_C_START){
+        printf("StartOK");
+        INICIARGRAPH = 1;
+        CTRL.tempo =0;
+    }
+    else{
+        printf("ERRO ");//, PENSAR NO QUE FAZER, APENAS RETRANSMITE\n");
+    }
+    CTRL.flagEnvio = 1;
+    //printf("VALOR ANGULO%f\n",CTRL.angulo);
+}
+
+void output_controle(){
+    static int i = 0;
+    if(i==0){
+        CTRL.msg.comando = C_C_START;
+        CTRL.msg.sequencia = i;//random()%1000;
+        CTRL.msg.valor = VAZIO;
+        CTRL.flagEnvio = 1;
+        // pensar o que fazer se perder um start
+        
+    }else if(i==1){
+        CTRL.msg.comando = C_C_OPEN;
+        CTRL.msg.sequencia = i;//random()%1000;
+        CTRL.msg.valor = UINIC;
+        CTRL.angulo +=  CTRL.msg.valor; // inicia em 100 dai
+        CTRL.flagEnvio = 1;
+        
+    }
+    
+    if(CTRL.flagEnvio){
+        bzero(BUFFER, BUFFER_SIZE);
+        CTRL.msg.sequencia = i;
+        responde_servidor(CTRL.msg, BUFFER);
+        CTRL.flagEnvio = 0;
+        //printf("Buffer %d: %s",i,BUFFER);
+        i++;
+        CTRL.tempo+=TPLANTA;
+    }
+}
+
+int bang_bang(int level){
+  static int flag_open=1;
+  static int flag_close=0;
+  int ang;
+  if(level < REF && !flag_open){
+    ang = UMAX;//100;
+    flag_open = 1;
+    flag_close = 0;
+  }else if(level > REF && !flag_close){
+    ang = -UMAX;//100;
+    flag_close = 1;
+    flag_open = 0;
+  }else{
+    ang = 0;
+  }
+  return ang;
 }
 
 /**
@@ -480,7 +593,7 @@ int confirma_comando(TPMENSAGEM msg){
 **/
 void imprime_tabela(){
   int i;
-  printf("TABELOSA\n");
+  printf("Tabela\n");
   for(i=0; i<LIN && TABELA[i][0] !=0 ;i++){
     if (TABELA[i][0] != VAZIO){
         CONTRUIM++;

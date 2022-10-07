@@ -1,4 +1,12 @@
-/// Fornecido pelo professor da disciplina.
+/**
+ * @file graph.h
+ * @author Lucas Esteves  e Vitor Carvalho
+ * @brief Parte Gráfica do código. Adaptado do código fornecdo por
+ *  Alceu Heinke Frigeri (professor da disciplina)
+ * @version 0.1
+ * @date 2022-10-06
+ * 
+ */
 
 #include <stdio.h>
 #include <SDL/SDL.h>
@@ -52,7 +60,37 @@ Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax);
 Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lcurrent, double INcurrent, double OUTcurrent);
 void setdatacolors(Tdataholder *data, PixelType Lcolor, PixelType INcolor, PixelType OUTcolor);
 void datadraw(Tdataholder *data, double time, double level, double inangle, double outangle);
-void quitevent();
+void quitevent(char *OUT);
+void printFrame(Tcanvas *canvas,int Width, int Height, double Xmax, double Ymax);
+
+void printFrame(Tcanvas *canvas,int Width, int Height, double Xmax, double Ymax){
+  int x,y;
+  canvas->Xoffset = 10;
+  canvas->Yoffset = Height;
+  canvas->Xext = 10;
+  canvas->Yext = 10;
+  canvas->Height = Height;
+  canvas->Width  = Width; 
+  canvas->Xmax   = Xmax;
+  canvas->Ymax   = Ymax;
+  canvas->Xstep  = Xmax/(double)Width/2;
+
+  //  canvas->zpixel = (PixelType *)canvas->canvas->pixels +(Height-1)*canvas->canvas->w;
+
+  SDL_Init(SDL_INIT_VIDEO); //SDL init
+  canvas->canvas = SDL_SetVideoMode(canvas->Width+canvas->Xext, canvas->Height+canvas->Yext, BPP, SDL_SWSURFACE); 
+
+  c_hlinedraw(canvas, 1, 0, (PixelType) SDL_MapRGB(canvas->canvas->format,  255, 255,  255));
+  for (y=10;y<Ymax;y+=10) {
+    c_hlinedraw(canvas, 3, y*Height/Ymax , (PixelType) SDL_MapRGB(canvas->canvas->format,  220, 220,  220));
+  }
+  c_vlinedraw(canvas, 0, 1, (PixelType) SDL_MapRGB(canvas->canvas->format,  255, 255,  255));
+  for (x=10;x<Xmax;x+=10) {
+    c_vlinedraw(canvas, x*Width/Xmax, 3, (PixelType) SDL_MapRGB(canvas->canvas->format,  220, 220,  220));
+  }
+}
+
+
 void Restart(int Width, int Height, double Xmax, double Ymax,double Lcurrent, double INcurrent, double OUTcurrent, Tdataholder *data);
 
  void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
@@ -91,71 +129,18 @@ void Restart(int Width, int Height, double Xmax, double Ymax,double Lcurrent, do
 
 Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
 {
-  int x,y;
+  
   Tcanvas *canvas;
   canvas = malloc(sizeof(Tcanvas));
-
-  canvas->Xoffset = 10;
-  canvas->Yoffset = Height;
-
-  canvas->Xext = 10;
-  canvas->Yext = 10;
-
-
-
-  canvas->Height = Height;
-  canvas->Width  = Width; 
-  canvas->Xmax   = Xmax;
-  canvas->Ymax   = Ymax;
-
-  canvas->Xstep  = Xmax/(double)Width/2;
-
-  //  canvas->zpixel = (PixelType *)canvas->canvas->pixels +(Height-1)*canvas->canvas->w;
-
-  SDL_Init(SDL_INIT_VIDEO); //SDL init
-  canvas->canvas = SDL_SetVideoMode(canvas->Width+canvas->Xext, canvas->Height+canvas->Yext, BPP, SDL_SWSURFACE); 
-
-  c_hlinedraw(canvas, 1, 0, (PixelType) SDL_MapRGB(canvas->canvas->format,  255, 255,  255));
-  for (y=10;y<Ymax;y+=10) {
-    c_hlinedraw(canvas, 3, y*Height/Ymax , (PixelType) SDL_MapRGB(canvas->canvas->format,  220, 220,  220));
-  }
-  c_vlinedraw(canvas, 0, 1, (PixelType) SDL_MapRGB(canvas->canvas->format,  255, 255,  255));
-  for (x=10;x<Xmax;x+=10) {
-    c_vlinedraw(canvas, x*Width/Xmax, 3, (PixelType) SDL_MapRGB(canvas->canvas->format,  220, 220,  220));
-  }
-
+  printFrame(canvas, Width,  Height,  Xmax,  Ymax);
   return canvas;
 }
 
 void Restart(int Width, int Height, double Xmax, double Ymax,double Lcurrent, double INcurrent, double OUTcurrent, Tdataholder *data) {
   int x,y;
   data->Tcurrent=0;
-   bzero(data->canvas, sizeof(Tcanvas));
-  data->canvas->Xoffset = 10;
-  data->canvas->Yoffset = Height;
-
-  data->canvas->Xext = 10;
-  data->canvas->Yext = 10;
-
-
-
-  data->canvas->Height = Height;
-  data->canvas->Width  = Width; 
-  data->canvas->Xmax   = Xmax;
-  data->canvas->Ymax   = Ymax;
-
-  data->canvas->Xstep  = Xmax/(double)Width/2;
-  data->canvas->canvas = SDL_SetVideoMode(data->canvas->Width+data->canvas->Xext,
-                                         data->canvas->Height+data->canvas->Yext,
-                                           BPP, SDL_SWSURFACE); 
-  c_hlinedraw(data->canvas, 1, 0, (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 255,  255));
-  for (y=10;y<Ymax;y+=10) {
-    c_hlinedraw(data->canvas, 3, y*Height/Ymax , (PixelType) SDL_MapRGB(data->canvas->canvas->format,  220, 220,  220));
-  }
-  c_vlinedraw(data->canvas, 0, 1, (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 255,  255));
-  for (x=10;x<Xmax;x+=10) {
-    c_vlinedraw(data->canvas, x*Width/Xmax, 3, (PixelType) SDL_MapRGB(data->canvas->canvas->format,  220, 220,  220));
-  }
+  bzero(data->canvas, sizeof(Tcanvas));
+  printFrame(data->canvas, Width,  Height,  Xmax,  Ymax);
   data->Lcurrent=Lcurrent;
   data->Lcolor= (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 180,  0);
   data->INcurrent=INcurrent;
@@ -199,7 +184,7 @@ void datadraw(Tdataholder *data, double time, double level, double inangle, doub
   SDL_Flip(data->canvas->canvas);
 }
 
-void quitevent() {
+void quitevent(char *OUT) {
   SDL_Event event;
 
   while(SDL_PollEvent(&event)) { 
@@ -207,19 +192,12 @@ void quitevent() {
       // close files, etc...
 
       SDL_Quit();
-      exit(1); // this will terminate all threads !
+      *OUT = 27;
+     //exit(1); // this will terminate all threads !
     }
   }
 
 }
-
-//
-//
-//
-//
-//
-//
-//
 
 //int main( int argc, const char* argv[] ) {
 //  Tdataholder *data;

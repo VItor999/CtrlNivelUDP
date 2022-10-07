@@ -9,6 +9,7 @@
         "math.h": "c",
         "tempo.h": "c",
         "graph.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "sdl.h": "c"
     }
 }

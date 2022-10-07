@@ -1,8 +1,14 @@
-// TODO:
-// AJUSTAR ONDE ZERA A MENSAGEM PRA MATAR A FUNÇÂO SIMULADOR 
+/**
+*@file serverv1.c
+*@author Lucas Esteves e Vitor Carvalho 
+*@brief Código fonte do servidor do trabalho 4 
+*@version FINAL 
+*@date 2022-10-01
+*
+**/
 
 //===================== Bibliotecas utilizadas =====================//
-//#define GRAPH 1
+#define GRAPH 1                               //comentar para desabilitar gráficos 
 
 #include <pthread.h>
 #include <stdio.h>
@@ -23,45 +29,50 @@
 
 //====================== Definições efetuadas ======================//
 
-#define DEBUG 1 
-//#define TEMPESTADE 1
-//#define TROVOADAS 1
-#define LIN 100  
-#define COL 3
-#define TOL 10 //tolerancia de linhas da tabela para conferencia de comando repetido
-#define BUFFER_SIZE 100
-#define RETURN_SIZE 10
-#define DELAY 10
-#define TGRAPH  50 //ms
+//#define DEBUG 1             // Habilita alguns prints de Debug 
+//#define TEMPESTADE 1        // Habilita perda de pacotes
+//#define TROVOADAS 1         // Habilita delay entre pacotes  
+//#define DELAY 100              // Delay inserido pela simulação de delay
 
+#define LIN 5000               /* Número de linhas da tabela de Pacotes Perdidos */ 
+                              // TODO: fazer uma tabela dinamica
+#define COL 3                 /* Número de colunas da tabela de Pacortes Perdidos */
+#define TOL 10                /* Tolerância de linhas da tabela para conferência de comando repetido */
+#define BUFFER_SIZE 100       /* Tamanho do buffer de comunicação*/
+#define RETURN_SIZE 15        /* Tamanho da variável de retorno */
+#define TGRAPH  50            /* Taxa de atualização do gráfico em ms*/       
+#define ISSERVER 1            /* Define como um servidor */
+
+ 
 
 //======================= Variáveis Globais  ======================//
-pthread_mutex_t mutexGRAPH = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t mutexGRAPH = PTHREAD_MUTEX_INITIALIZER;       /* MUTEX para a Thread Gráfica*/
+pthread_mutex_t mutexCOM = PTHREAD_MUTEX_INITIALIZER;         /* MUTEX para a Thread de Comunicação*/
 //pthread_mutex_t mutexSIM = PTHREAD_MUTEX_INITIALIZER;
-char OUT = '\0';
-TPMENSAGEM MENSAGEM;
-TPPLANTA PLANTASIM;
-int NOVAMENSAGEM =0;   /* Flag para indicar nova mensagem*/
-int TABELA[LIN][COL]={0};
-int LINHAATUAL = 0;    		// linha atual da tabela
-int TABREINIC = 0;      /* Flag para indicar o reinicio do preenchimento da tabela */
-int INICIARGRAPH = 0;   /* Flag para indicar que o gráfico deve ser reiniciado     */
-int ATTGRAPH = 0;       /* Flag para indicar que o gráfico deve ser atualizado     */
-int PLANTAATIVA =0;      /* Flag para indicar que a planta está ativa               */
+char OUT = '\0';                                              /* Variável para encerramento do servidor*/
+TPMENSAGEM MENSAGEM;                                          /* Variável Global que contêm as informações de uma mensagem*/
+TPPLANTA PLANTASIM;                                           /* Variável Global que contêm as informações do processo simulado*/
+int TABELA[LIN][COL]={0};                                     /* Tabela que contêm lista de pacotes perdidos*/
+int NOVAMENSAGEM =0;                                          /* Flag global para indicar uma nova mensagem*/
+int LINHAATUAL = 0;    		                                    /* Variável global que indica a linha atual da tabela */
+int TABREINIC = 0;                                            /* Flag global para indicar o reinicio do preenchimento da tabela */
+int INICIARGRAPH = -1;                                         /* Flag global para indicar que o gráfico deve ser reiniciado     */
+int ATTGRAPH = 0;                                             /* Flag global para indicar que o gráfico deve ser atualizado     */
+int PLANTAATIVA =0;                                           /* Flag global para indicar que a planta está ativa               */
 #ifdef DEBUG
-int CONTRUIM =0 ;
+int CONTRUIM =0 ;                                             // Indica o número de pacotes perdios ou repetidos recebidos
 #endif
-int isserver = 0;
+
 //===================== Cabeçalhos de Funções =====================//
 
-void *threadGraph(void* args);
+void *threadGraph(void* args);                                
 void *threadComm(void *port);
 void atualiza_tabela(TPMENSAGEM msg);
 int  verifica_tabela(TPMENSAGEM msg);
 void responde_cliente(TPMENSAGEM msg, char ans[]);
-void simulador();
 void imprime_tabela();
+void tryExit();
 
 //#################################################################//
 //#########################    MAIN    ############################//
@@ -94,7 +105,6 @@ int main(int argc, char *argv[]){
   //----- Teporização
   struct timespec clkPlanta;
   struct timespec clkGraph;
-  long int deltaT = 0;
   clockid_t clk_id = CLOCK_MONOTONIC_RAW;
   int attPlanta = 0 ;
   int attGraphTime = 0;
@@ -102,13 +112,14 @@ int main(int argc, char *argv[]){
 
   //---- Verificação dos parametros 
   if (argc < 2 && argc!=3){  // chamada de programa + porta
-    fprintf(stderr, "usage %s port isserver\n",argv[0]);
+    fprintf(stderr, "usage %s port ISSERVER\n",argv[0]);
     exit(0);
-  }else if (argc==2) { // se passar direto simulo servidor
-    isserver = 1;
-  }else{
-    isserver = atoi(argv[2]);
   }
+  //else if (argc==2) { // se passar direto simulo servidor
+  //  ISSERVER = 1;
+  //}else{
+  //  ISSERVER = atoi(argv[2]);
+  //}
 
   //---- Captura de dado relevante para o UDP
   porta = htons(atoi(argv[1]));
@@ -127,21 +138,21 @@ int main(int argc, char *argv[]){
   }
 
   // Notificação de sucesso
-  if (isserver){
-    printf("Servidor iniciado para teste do servidor, parabens\n");
-  }else{
-    printf("Servidor iniciado para teste do cliente, parabens\n");
-  }
+  //if (ISSERVER){
+    printf("Programa do servidor iniciado com SUCESSO.\n");
+  //}else{
+  //  printf("Servidor iniciado para teste do cliente, parabens\n");
+  //}
  
   //---- Início nos timers
   clock_gettime(clk_id,&clkPlanta);
-  clock_gettime(clk_id,&clkGraph);
+ 
 
   //---- LOOP principal
   while (OUT != 27){ // pressionando esq encerro o server PRECISO DAR JEITO DE FAZER A TEMPORIZACAO
     // Variavel OUT é caputara dela thread que está sempre operando -> COMM
     attPlanta = deltaTempo(TPLANTA,clkPlanta);
-    attGraphTime = deltaTempo(TGRAPH,clkGraph);
+
     if (NOVAMENSAGEM){// && pthread_mutex_trylock(&mutexCOM)==0){
       comando = MENSAGEM.comando;
       //printf("\tCOM %d\tSEQ %d\tVAL %d",comando,MENSAGEM.sequencia,MENSAGEM.valor);
@@ -163,7 +174,8 @@ int main(int argc, char *argv[]){
         }
         pthread_mutex_unlock(&mutexGRAPH);
       }
-      simulador(); // NÂO COMENTAR ESSA BAGAÇA PQ TEM UM MANDRAKE LÁ NO MEIO DO THREAD COM QUE NÂO FOI CORRIGIDO
+      // Atribui zero ao comando, indicando que já trabalhou-se com a mensagem
+      MENSAGEM.comando =0;
       pthread_mutex_lock(&mutexCOM);
       NOVAMENSAGEM = 0;
       pthread_mutex_unlock(&mutexCOM);
@@ -175,14 +187,6 @@ int main(int argc, char *argv[]){
       clock_gettime(clk_id,&clkPlanta);
       pthread_mutex_unlock(&mutexGRAPH);
     }
-
-    if (attGraphTime && PLANTAATIVA){
-      pthread_mutex_lock(&mutexGRAPH);
-      ATTGRAPH =1; // aqui não importa o conteudo da msg
-      attGraphTime = 0;
-      clock_gettime(clk_id,&clkGraph);
-      pthread_mutex_unlock(&mutexGRAPH);
-    }
     
   }
 
@@ -190,7 +194,9 @@ int main(int argc, char *argv[]){
   pthread_join(pthComm, NULL);
   pthread_join(pthGraph, NULL);
   //imprime_tabela();
+  #ifdef DEBUG
   printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
+  #endif
   printf("Encerrando main\n\n");
   return 0;
 }
@@ -217,9 +223,11 @@ void *threadComm(void *port){
   char msg[strlen(buffer)];
   int repetido = 0;
   int nivel;
-  sock = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_STREAM -> TCP/IP tempo de break é o zero poderiamos tentar alterar para outro blg 1 ms??
-  // Esse bagulho não bloquei, minima ideia de como opera dar uma pesquisada em como usar o rev
-  fcntl(sock, F_SETFL, O_NONBLOCK);
+  sock = socket(AF_INET, SOCK_DGRAM,0); 
+  struct timeval read_timeout;
+  read_timeout.tv_sec = 0;
+  read_timeout.tv_usec = uTIMEOUT;
+  setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
   if (sock < 0){
     error("Opening socket");
   }
@@ -237,9 +245,10 @@ void *threadComm(void *port){
   printf("Servico de comunicação iniciado em thread\n");
 
   while (OUT != 27 && msg[0]!='\n'){ // pressionando esq encerro o server
-    OUT = teclado(); 
+    
     if(!flagNovaMsg){ // só altero n se leio 
       n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
+      //printf("sai");
     }
     if (n < 0 && n != -1){
       error("Receber");
@@ -260,7 +269,7 @@ void *threadComm(void *port){
         //}
       }
       if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
-        mensagem = analisarComando(msg,isserver);
+        mensagem = analisarComando(msg,ISSERVER);
         if(mensagem.comando == C_S_CLOSE || mensagem.comando == C_S_OPEN){
           //printf("VERIFICA TABELA!!!\n");
           repetido = verifica_tabela(mensagem);
@@ -271,6 +280,7 @@ void *threadComm(void *port){
           obterInfo(&MENSAGEM,mensagem);  //Escreve pro mundo
           NOVAMENSAGEM = 1;  //notifica o mundo
           pthread_mutex_unlock(&mutexCOM); // libera o mutex
+          // -Trava enquanto a informação disponível não for utilizada 
           while(MENSAGEM.comando != 0){ // fica travado esperando o simulador dizer que usou a info
             //printf("AGUARDANDO SIMULADOR\n");
           }
@@ -330,6 +340,12 @@ void *threadComm(void *port){
   printf("\nEncerrando thread\n");
 }
 
+/**
+*@brief Thread que executa o parte gráfica do programa. É atualizada conforme a definição de TGRAPH
+*     
+*@param args 
+*@return void* 
+**/
 void* threadGraph(void* args)
 {
     int exit =0, ctrl=0, comando=0;
@@ -338,69 +354,64 @@ void* threadGraph(void* args)
     static int tempo =0;
     #ifdef GRAPH
     Tdataholder *data;
-    data = datainit(1000,500,150,120,(double)LVINIC,(double)0,(double)0);
+    data = datainit(640,480,150,120,(double)LVINIC,(double)0,(double)0);
+    datadraw(data,0,LVINIC,50,outAngle(0));
     #endif
-    pthread_mutex_lock(&mutexGRAPH); 
-    #ifdef GRAPH
-    datadraw(data,(double)PLANTASIM.tempo/1000.0,(double)PLANTASIM.nivel*100,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
-    #endif
-    pthread_mutex_unlock(&mutexGRAPH);
     printf("Thread Gráfica Iniciada\n");
+    tempo =0;
+    int taux=0;
+    struct timespec clkGraph;
+    clockid_t clk_id = CLOCK_MONOTONIC_RAW;
+    int attGraphTime = 0;
+    int rodar=0;
+    clock_gettime(clk_id,&clkGraph);
     while(OUT != 27){
-      if(INICIARGRAPH){  // se não comecei -> o importante é ver se tenho que começar
+      if(INICIARGRAPH==1 || rodar==-1){  // se não comecei -> o importante é ver se tenho que começar
         if(pthread_mutex_trylock(&mutexGRAPH)==0){
           INICIARGRAPH = 0;
         // botar o limpar grafico e inicio aqui
-	  tempo =0;
+        if(rodar ==0)  clock_gettime(clk_id,&clkGraph);
+          rodar =1;
+          Restart(640,480,150,120,(double)LVINIC,(double)0,(double)0,data);
           pthread_mutex_unlock(&mutexGRAPH);
         } 
       }
-      if(!INICIARGRAPH){
-        if(ATTGRAPH){
-	    tempo+= TGRAPH;
+      if(rodar==1){
+            attGraphTime = deltaTempo(TGRAPH,clkGraph);
+        if(attGraphTime){
+	          tempo+= TGRAPH;
+            taux = tempo%150000;
             pthread_mutex_lock(&mutexGRAPH);
             #ifdef GRAPH
-            datadraw(data,(double)tempo/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
+            datadraw(data,(double)taux/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
             #endif
             #ifndef GRAPH
-            printf("PLANTA:\t%6ld\t%3d\t%3.3f\t%3.3f\n",tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
+            printf("PLANTA:\tT-%6ld\tN-%3d\tV-%3.3f\tP-%3.3f\n",tempo,PLANTASIM.nivel,PLANTASIM.angIN,PLANTASIM.angOUT);
             #endif
-            ATTGRAPH = 0;
             pthread_mutex_unlock(&mutexGRAPH);
+            
+            if ((taux)==0){
+              rodar = -1;
+              taux =0;
+            }
+          //  printf("%ld\n",tempo);
+            tryExit();
+            clock_gettime(clk_id,&clkGraph);
         }
       }
-     // ISSO TEM Q IR POR CLIENTE
-      /*
-      angulo = controle(PLANTASIM.nivel);
-      //printf("ang:%d\t",angulo);
-      if(angulo==-100){
-	      MENSAGEM.comando = C_S_CLOSE;
-	      MENSAGEM.valor=-angulo;
-      }else if(angulo==100){
-	      MENSAGEM.comando = C_S_OPEN;
-	      MENSAGEM.valor=angulo;
-      }else{
-	      MENSAGEM.comando = angulo;
+      else{
+        tryExit();
       }
-      if (PLANTASIM.nivel ==0) exit =1; 
      
-      pthread_mutex_unlock(&mutexGRAPH);
-      */
-      #ifdef GRAPH
-      quitevent();
-      #endif
     }
     printf("FIM GRAFICO\n");
-    return;
 }
 
-
-/**
-*@brief Futura Thread que devera conter o simulador
-*
-**/
-void simulador(){//simula simulador kkj NÂO APAGAR%
-  MENSAGEM.comando=0;
+void tryExit(){
+    //OUT = teclado(); 
+    #ifdef GRAPH
+    quitevent(&OUT);
+    #endif
 }
 
 /**
