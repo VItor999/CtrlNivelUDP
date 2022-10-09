@@ -121,14 +121,7 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
         // Calcula o fluxo de saída         
         outflux = (((float)PLANTA->max) / 100) * (level/1.25 + 0.2) * sin(M_PI/2 * outAngle(T)/100);
         level = level + 0.00002 * TPLANTA * (influx - outflux); // Atualiza o nível 
-        // Aqui percebe-se a dinâmica do processo
-        // Como TPLANTA * 2e-5 = 2e-4 %nivel/ms*(entrada-saida)
-        // Como TPLANTA = 10 ms -> 1/0.01 => 100 chamadas por segundo
-        // Assim nivel = nivel anterior + 0.02*(entrada-saida)/s
-        // Aproximadamente 50s para efetuar 100% de um delta
-        // Portanto a constante de tempo, considerando um sistema de primeira ordem vale  1/31.5 =~ 0,032 s^-1
-        // Isso posto -> só fazer o controle 
-        // ganho estático é unitário
+         
         if (level <0){                                         // Saturação do nível negativo
             level = 0;
         }

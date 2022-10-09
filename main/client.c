@@ -148,6 +148,7 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
     printf("\nCliente Inicializado Corretamente, parabens\n"); 
+    waitms(100);
     char opc ='\0';
     while (opc=='\0'){
         printf("Selecione o controlador desejado:\n\t (0) Bang-Bang \t(1) PID\nCaso deseje encerrar o programa, digite q\n");
@@ -157,15 +158,24 @@ int main(int argc, char *argv[]){
         case 'Q':
         case 'q':
             printf("\nEncerrado");
+            OUT =27;
             break;
         case '0':
-            TIPOCONTROLE = CBB;                         // Define o controle como Bang-Bang
+            system("clear");
+            printf("\nControlador PID selecionado\n");
             printf("\nControlador Bang-Bang selecionado");
             
+            TIPOCONTROLE = CBB;                         // Define o controle como Bang-Bang
+            starPID(&CTRLPID);
             break;              
-            case '0':
+        case '1':
+            system("clear");
+            printf("\nControlador PID selecionado\n");
+            printf("Executando o controle\n");    
+            starPID(&CTRLPID);
+            pthread_mutex_lock(&mutexCOM);           
             TIPOCONTROLE = CPID;                        // Define o controle como PID
-            printf("\nControlador PID selecionado");
+            pthread_mutex_unlock(&mutexCOM);
             break;
         default:
             printf("\nERRO!! Selecione uma opção válida.");
@@ -173,6 +183,8 @@ int main(int argc, char *argv[]){
             break;
         }
     }
+ 
+    
     //---- LOOP principal -> Roda a rotina de controle
     while (OUT != 27){                                  // Pressionando ESC encerro o cliente
         // Essa váriavel é atualizada pela Thread Gráfica (função TryExit)
@@ -217,7 +229,7 @@ int main(int argc, char *argv[]){
     //---- Encerrando
     pthread_join(pthComm, NULL);
     pthread_join(pthGraph, NULL);
-    printf("\n\n===== Encerrando a Thread Principal  =====");
+    printf("\n===== Encerrando a Thread Principal  =====\n");
     #ifdef DEBUG
     imprime_tabela();
     printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
@@ -367,8 +379,7 @@ void *threadComm(void *pcli){
     OUT = 27;
     rSend = write(sockfd, "\n", 1);                        // Para encerrar o servidor simultâneamente
     close(sockfd);
-    printf("\n\n==== Encerrando Thread de Comunicação ====");
-    return;
+    printf("\n==== Encerrando Thread de Comunicação ====\n");
 }
 
 void* threadGraphClient(void* args)
@@ -435,7 +446,7 @@ void* threadGraphClient(void* args)
             tryExit();                                  // Sempre Verifica se o usuário deseja sair             
         }
     }
-    printf("\n\n======== Encerrando Thread Gráfica =======");
+    printf("\n======== Encerrando Thread Gráfica =======\n");
 }
 
 /**

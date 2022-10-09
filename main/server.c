@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
   #ifdef DEBUG
   printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
   #endif
-  printf("\n\n===== Encerrando a Thread Principal  =====");
+  printf("\n===== Encerrando a Thread Principal  =====\n");
   return 0;
 }
 
@@ -325,8 +325,7 @@ void *threadComm(void *port){
     }
   }
   OUT = 27;
-  printf("\n\n==== Encerrando Thread de Comunicação ====");
-  return;
+  printf("\n==== Encerrando Thread de Comunicação ====\n");
 }
 
 /**
@@ -396,7 +395,7 @@ void* threadGraph(void* args)
       }
      
     }
-    printf("\n\n======== Encerrando Thread Gráfica =======");
+    printf("\n======== Encerrando Thread Gráfica =======\n");
 }
 
 void tryExit(){

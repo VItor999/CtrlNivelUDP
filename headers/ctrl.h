@@ -33,18 +33,18 @@ typedef struct TPCONTROLE
     float angulo;                                 /* Ângulo de abertura da válvula (0-100)*/
     int nivel;                                    /* Nivel atual */
     int flagEnvio;                                /* Status do envio de comando */
-    TPMENSAGEM msg;
+    TPMENSAGEM msg;                               /* Mensagem que será enviada*/
 }TPCONTROLE;
 
 typedef struct TPPID
 {
-    float e_1;
-    float e_0;
-    float p_0;
-    float i_0;
-    float i_1;
-    float d_0;
-    int ctrl_1;
+    float e_1;                                    /* Erro anterior */
+    float e_0;                                    /* Erro Atual*/
+    float p_0;                                    /* Sinal Proporcional*/
+    float i_0;                                    /* Sinal Integral*/
+    float i_1;                                    /* Sinal Integral Anterior*/
+    float d_0;                                    /* Sinal Derivativo*/
+    int ctrl_1;                                   /* Sinal de Controle Anterior*/
 }TPPID;
 
 //===================== Cabeçalhos de Funções =====================//
@@ -62,6 +62,8 @@ void starPID(TPPID *PID);
 *@param PID Estrutura do tipo PID que será inicializada
 **/
 void starPID(TPPID *PID){
+  // PID implementado na forma paralela e projetado no espaço de tempo discreto 
+  // Justifica o porque de não existir nenhum elemento dividindo  a derivada (passo unitário)
   PID -> e_1 = 0;
   PID -> e_0 = LVINIC;
   PID -> p_0 = 40;  
@@ -80,7 +82,8 @@ void starPID(TPPID *PID){
 * O retorno é inteiro para já ser utilizado no protocolo
 **/
 int ctrlPID (int level, TPPID *pid){
-  float e0,e1,i0,i1,p0,d0,ctrl1;
+  float e0,e1,i0,i1,p0,d0,ctrl1; // poderia fazer todas  as operaçoes usando pontieros 
+  int angulo;
   ctrl1 = pid->ctrl_1;
   e1 = pid->e_0;
   i1 = pid->i_0;
@@ -101,7 +104,8 @@ int ctrlPID (int level, TPPID *pid){
   float ctrl = p0 + i0 + d0;
   if (ctrl >100) ctrl=100;
   else if (ctrl<0) ctrl =0;
-  int angulo = (int)(ctrl-ctrl1);
+
+  angulo = (int)(ctrl-ctrl1);
 
   pid->e_0 = e0;
   pid->p_0 = p0;
