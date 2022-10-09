@@ -18,9 +18,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 ### Completa
 
 1. Navegue para o diretorio *main* e execute  o script *comp.sh*
-2. Inicie o servidor rodando o comando `./server <porta>`
-3. Inicie o cliente rodando o comando `./client <serverIP> <porta>`
-4. Encerre a janela gráfica do cliente para encerrar ambos os programas simultâneamente
+
 
 #### Problemas comuns 
 - Caso seja necessário, habilite as permissões para o *script* executando o comando: `chmod +x bash.sh`
@@ -32,6 +30,52 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 3. Comente, em cada um dos arquivos, o comando `#define GRAPH 1` (linha **11** em ambos os arquivos) utilizando `//`
 4. Compile o servidor utilizando os seguintes comandos: `gcc server.c -o server -pthread -lm -lrt`
 5. Compile o cliente utilizando os seguintes comandos: `gcc client.c -o client -pthread -lm -lrt`
-6. Inicie o servidor rodando o comando `./server <porta>`
-7. Inicie o cliente rodando o comando `./client <serverIP> <porta>`
-8. Pressione ESC no cliente para encerar ambos os programas simultâneamente
+
+## Execução
+### Completa 
+1. Inicie o servidor rodando o comando `./server <porta>`
+2. Inicie o cliente rodando o comando `./client <serverIP> <porta>`
+3. Selecione o tipo de controlador desejado, na janela do cliente. Após pressione Enter
+4. Quando desejar, encerre a janela gráfica do cliente para encerrar ambos os programas simultâneamente.
+
+### Gráfica 
+1. Execute os passos 1 - 3 da eexecução completa. 
+2. Quando desejar, pressione Esc no cliente para encerrar ambos os programas simultâneamente
+
+# Resultados 
+Neste treço são apresentadas algumas capturas de telas  a respeito dos resultados obtidos.
+## Sistema em Malha aberta
+Na Figura 1, abaixo, é apresentado a resposta do sistema sem controlador. 
+
+![1.Processo a ser controlado em malha aberta](/images/SEMCONTROLE.png)
+
+Por sua vez, na Figura 2, é a apresentado o ensaio, sem pertubação, que foi efetuado para identificar (minimamente) características do processo para possibilitar seu controle.
+
+![2.Ensaio efetuado](/images/ensaio.png)
+
+Com base nessas duas Figuras (Figura 1 e Figura 2) é possível verificar a necessiade do controlador e o como o sistema se comporta na presença de um acionamento 
+## Resultados com controlador do Tipo Bang 
+### Sem perturbação de rede
+Na Figura 3, abaixo, é possível observar o controle do processo com um controlador Bang-Bang e sem perturbação de rede. A janela da esquerda representa a vista do servidor, onde a planta é executada e a da direita a vista do cliente, que efetua o controle. Para a janela do servidor:
+- Verde: abertura da válvula de entrada
+- Azul: perturbação/ variação da válvula de saída
+- Laranja: nivel do tanque  
+Para a janela do cliente:
+- Verde: abertura da válvula de entrada
+- Azul: referência/nível desejado para o tanque
+- Laranja: nível do tanque  
+
+![3.Controle sem problemas de rede](/images/bangbangSR.png)
+
+## Resultados com controlador do Tipo PID 
+### Sem perturbação de rede
+Na Figura 4, abaixo, é possível observar o controle do processo com um controlador PID e sem perturbação de rede. A janela da esquerda representa a vista do servidor, onde a planta é executada e a da direita a vista do cliente, que efetua o controle. Para a janela do servidor:
+- Verde: abertura da válvula de entrada
+- Azul: perturbação/ variação da válvula de saída
+- Laranja: nivel do tanque  
+Para a janela do cliente:
+- Verde: abertura da válvula de entrada
+- Azul: referência/nível desejado para o tanque
+- Laranja: nível do tanque  
+
+![4.Controle sem problemas de rede](/images/PISR.png)

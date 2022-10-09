@@ -70,7 +70,7 @@ char OUT = ' ';                                 // Flag para Encerrar o programa
 int NOVALEITURA = 0;                            // Indica a necessidade de nova leitura 
 int NOVAESCRITA = 0;                            // Indica a necessidade de efetuar uma nova escrita 
 int INICIARGRAPH =0;                            // Notifica o ínicio da thread Gráfica
-
+int TIPOCONTROLE =0;                            // Indica tipo de controlador utilizado
 //---- Com                                      
 int TABELA[LIN][COL]={0};                       // Tabela com pacotes perdidos
 char BUFFER[BUFFER_SIZE]={0};                   // Buffer global para escrita de mensagens
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
     
     //---- Variáveis Auxiliares 
     CTRL.flagEnvio = 1;                       // Inicializa campo do struct para envio
-    CTRL.angulo =ANGINIC;                      // Atribui angulo inicial
+    CTRL.angulo =ANGINIC;                     // Atribui angulo inicial
     int r1,r2;                                // Retornos para notificação de sucesso na criação de Threads 
     int flag_ctrl = 0;                        // Zera indicador de atualização do controle
 
@@ -147,11 +147,31 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Error - pthread_create() GRAPH return code: %d\n",  r2);
         exit(EXIT_FAILURE);
     }
-    printf("Cliente Inicializado Corretamente, parabens\n"); 
-    int opc =1;
-    if (opc == 1){
-        starPID(&CTRLPID);
-        printf("Controlador PID selecionado");
+    printf("\nCliente Inicializado Corretamente, parabens\n"); 
+    char opc ='\0';
+    while (opc=='\0'){
+        printf("Selecione o controlador desejado:\n\t (0) Bang-Bang \t(1) PID\nCaso deseje encerrar o programa, digite q\n");
+        scanf("%c",&opc);
+        switch ( opc)
+        {
+        case 'Q':
+        case 'q':
+            printf("\nEncerrado");
+            break;
+        case '0':
+            TIPOCONTROLE = CBB;                         // Define o controle como Bang-Bang
+            printf("\nControlador Bang-Bang selecionado");
+            
+            break;              
+            case '0':
+            TIPOCONTROLE = CPID;                        // Define o controle como PID
+            printf("\nControlador PID selecionado");
+            break;
+        default:
+            printf("\nERRO!! Selecione uma opção válida.");
+            opc ='\0';
+            break;
+        }
     }
     //---- LOOP principal -> Roda a rotina de controle
     while (OUT != 27){                                  // Pressionando ESC encerro o cliente
@@ -197,7 +217,7 @@ int main(int argc, char *argv[]){
     //---- Encerrando
     pthread_join(pthComm, NULL);
     pthread_join(pthGraph, NULL);
-    printf("\n\n\t==== Encerrando a Thread Principal ====\n\n");
+    printf("\n\n===== Encerrando a Thread Principal  =====");
     #ifdef DEBUG
     imprime_tabela();
     printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
@@ -206,7 +226,7 @@ int main(int argc, char *argv[]){
 }
 
 void *threadComm(void *pcli){
-   
+    //---- Comunicaçao
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
@@ -347,8 +367,8 @@ void *threadComm(void *pcli){
     OUT = 27;
     rSend = write(sockfd, "\n", 1);                        // Para encerrar o servidor simultâneamente
     close(sockfd);
-    printf("\n\n\t====Encerrando Thread de Comunicação====");
-    return 0;
+    printf("\n\n==== Encerrando Thread de Comunicação ====");
+    return;
 }
 
 void* threadGraphClient(void* args)
@@ -381,7 +401,7 @@ void* threadGraphClient(void* args)
 
     //---- LOOP Gráfico principal
     while(OUT != 27){
-        if(INICIARGRAPH || rodar ==-1){                    // Caso não tenha inciado ou não deva executar
+        if(INICIARGRAPH || rodar ==-1){                    // Caso não tenha iniciado ou não deva executar
             if(pthread_mutex_trylock(&mutexGRAPH)==0){      
                 INICIARGRAPH = 0;                              
                 rodar = 1;                                 // Habilita a execução
@@ -412,11 +432,10 @@ void* threadGraphClient(void* args)
             }
         }
         else{
-        //printf("%d\n",rodar);
             tryExit();                                  // Sempre Verifica se o usuário deseja sair             
         }
     }
-    printf("\n\n\t====Encerrando Thread Gráfica====");
+    printf("\n\n======== Encerrando Thread Gráfica =======");
 }
 
 /**
@@ -443,8 +462,8 @@ void input_controle(){
     }
     else if(MENSAGEM.comando == C_C_GET){
         CTRL.nivel = MENSAGEM.valor;
-        //angulo = bang_bang(CTRL.nivel);
-        angulo = ctrlPID(CTRL.nivel,&CTRLPID);
+        if(TIPOCONTROLE==CBB)angulo = bang_bang(CTRL.nivel);
+        else if (TIPOCONTROLE=CPID)angulo = ctrlPID(CTRL.nivel,&CTRLPID);
         if(angulo<0){
             CTRL.msg.comando = C_C_CLOSE;
             CTRL.angulo+=angulo;
@@ -545,9 +564,7 @@ int confirma_comando(TPMENSAGEM msg){
             TABELA[i][1]=VAZIO;
             TABELA[i][2]=VAZIO;
             encontrou=1;
-        }/*else{
-            printf("\tNot Found %d,%d(i:%d)\t",msg.comando,msg.sequencia,i);
-        }*/
+        }
     }
     return encontrou;
 }

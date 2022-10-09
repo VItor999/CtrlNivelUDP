@@ -85,9 +85,6 @@ int main(int argc, char *argv[]){
   // Só preciso passar a porta no servidor
   //---- Inicializações
   system("clear");
-  #ifdef DEBUG 
-  srandom(time(NULL));
-  #endif
   //---- UDP
   int porta;
 
@@ -101,25 +98,19 @@ int main(int argc, char *argv[]){
   vazia.comando = VAZIO;
   vazia.sequencia = VAZIO;
   vazia.valor = VAZIO;
-
-  //----- Teporização
-  struct timespec clkPlanta;
-  struct timespec clkGraph;
-  clockid_t clk_id = CLOCK_MONOTONIC_RAW;
-  int attPlanta = 0 ;
-  int attGraphTime = 0;
   int comando;
 
+  //----- Teporização
+  struct timespec clkPlanta;                     // Relógio do processo                  
+  clockid_t clk_id = CLOCK_MONOTONIC_RAW;        // Para grarantir o avanço no relógio
+  int attPlanta = 0 ;                            // Indica se deve atualizar a simulação                  
+  clock_gettime(clk_id,&clkPlanta);              // Inicializa o relógio
+
   //---- Verificação dos parametros 
-  if (argc < 2 && argc!=3){  // chamada de programa + porta
+  if (argc < 2 && argc!=3){                     // chamada de programa + porta
     fprintf(stderr, "usage %s port ISSERVER\n",argv[0]);
     exit(0);
   }
-  //else if (argc==2) { // se passar direto simulo servidor
-  //  ISSERVER = 1;
-  //}else{
-  //  ISSERVER = atoi(argv[2]);
-  //}
 
   //---- Captura de dado relevante para o UDP
   porta = htons(atoi(argv[1]));
@@ -137,37 +128,28 @@ int main(int argc, char *argv[]){
     exit(EXIT_FAILURE);
   }
 
-  // Notificação de sucesso
-  //if (ISSERVER){
-    printf("Programa do servidor iniciado com SUCESSO.\n");
-  //}else{
-  //  printf("Servidor iniciado para teste do cliente, parabens\n");
-  //}
- 
-  //---- Início nos timers
+  printf("Programa do servidor iniciado com SUCESSO.\n");
   clock_gettime(clk_id,&clkPlanta);
- 
 
   //---- LOOP principal
-  while (OUT != 27){ // pressionando esq encerro o server PRECISO DAR JEITO DE FAZER A TEMPORIZACAO
-    // Variavel OUT é caputara dela thread que está sempre operando -> COMM
+  while (OUT != 27){
+    // Variavel OUT é caputara dela thread gráfica
     attPlanta = deltaTempo(TPLANTA,clkPlanta);
 
-    if (NOVAMENSAGEM){// && pthread_mutex_trylock(&mutexCOM)==0){
+    if (NOVAMENSAGEM){              
       comando = MENSAGEM.comando;
-      //printf("\tCOM %d\tSEQ %d\tVAL %d",comando,MENSAGEM.sequencia,MENSAGEM.valor);
-      if (comando == C_S_CLOSE || comando == C_S_OPEN ||
+      if (comando == C_S_CLOSE || comando == C_S_OPEN ||   // Caso seja um comando útil
           comando == C_S_SET   || comando == C_S_START){
         pthread_mutex_lock(&mutexGRAPH);
-        if(attPlanta){
-          atualizarPlanta(MENSAGEM,&PLANTASIM,PARAMCICLO);
-          attPlanta = 0; // desliga a atualização da planta
+        if(attPlanta){                                     // Deve Atualizar a planta?
+          atualizarPlanta(MENSAGEM,&PLANTASIM,PARAMCICLO); // Atualiza
+          attPlanta = 0;                                   // desliga a atualização da planta
           clock_gettime(clk_id,&clkPlanta);
         }
         else {
-          atualizarPlanta(MENSAGEM,&PLANTASIM,PARAM);
+          atualizarPlanta(MENSAGEM,&PLANTASIM,PARAM);     // Atualize somente os parâmetros de simulação
         }
-        if(MENSAGEM.comando == C_S_START){
+        if(MENSAGEM.comando == C_S_START){                // Inicia/Reinicia o porcesso.
           INICIARGRAPH = 1;
           PLANTAATIVA = 1;
           printf("(Re)Iniciando Processo\n");
@@ -182,7 +164,7 @@ int main(int argc, char *argv[]){
     }
     if(attPlanta && PLANTAATIVA){
       pthread_mutex_lock(&mutexGRAPH);
-      atualizarPlanta(vazia,&PLANTASIM,CICLO); // aqui não importa o conteudo da msg
+      atualizarPlanta(vazia,&PLANTASIM,CICLO);            // Aqui não importa o conteudo da mensagem
       attPlanta = 0;
       clock_gettime(clk_id,&clkPlanta);
       pthread_mutex_unlock(&mutexGRAPH);
@@ -197,7 +179,7 @@ int main(int argc, char *argv[]){
   #ifdef DEBUG
   printf("Pacotes Perdidos + repetidos:\t%d\n", CONTRUIM );
   #endif
-  printf("Encerrando main\n\n");
+  printf("\n\n===== Encerrando a Thread Principal  =====");
   return 0;
 }
 
@@ -213,99 +195,106 @@ int main(int argc, char *argv[]){
 *@return void* 
 **/
 void *threadComm(void *port){
-  TPMENSAGEM mensagem;
+  //---- Comunicaçao
   int sock, length, fromlen, n = -1;
   struct sockaddr_in server;
   struct sockaddr_in from;
-  char buffer[BUFFER_SIZE];
-  char retorno [RETURN_SIZE]="\0";
-  int flagNovaMsg = 0;
-  char msg[strlen(buffer)];
-  int repetido = 0;
-  int nivel;
-  sock = socket(AF_INET, SOCK_DGRAM,0); 
-  struct timeval read_timeout;
+ 
+ 
+  //---- Auxiliares de comunicação
+  TPMENSAGEM mensagem;
+  char buffer[BUFFER_SIZE];                             // Bufffer Local
+  char retorno [RETURN_SIZE]="\0";                      // Buffer com mensagem de retorno
+   char msg[strlen(buffer)];                            // Buffer auxiliar de mensagem
+  int flagNovaMsg = 0;                                  // Flag de nova mensagem
+  int repetido = 0;                                     // Flag para indicar se uma mensagem/pacote é repetido
+
+  //---- Temporização 
+  struct timeval read_timeout;                  
   read_timeout.tv_sec = 0;
-  read_timeout.tv_usec = uTIMEOUT;
+  read_timeout.tv_usec = uTIMEOUT;                      // Time out 
+     
+  //---- Configuração do SOCKET 
+  sock = socket(AF_INET, SOCK_DGRAM,0);  
   setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
   if (sock < 0){
     error("Opening socket");
   }
+
+  //---- Inicializações auxiliares
   length = sizeof(server);
+  fromlen = sizeof(struct sockaddr_in);
+  msg[0]='\0';
+
+  //---- Limpeza do socket 
   bzero(&server, length); // limpando os valores do server
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
   server.sin_port = *((int *)port); // converte o valor da porta para o formato necessário
-  // Binding
+ 
+  //---- Binding
   if (bind(sock, (struct sockaddr *)&server, length) < 0){
     error("binding");
   }
-  fromlen = sizeof(struct sockaddr_in);
-  msg[0]='\0';
+  
+  //---- Notificação de sucesso
   printf("Servico de comunicação iniciado em thread\n");
 
-  while (OUT != 27 && msg[0]!='\n'){ // pressionando esq encerro o server
-    
+  //---- LOOP de Comunicação
+  while (OUT != 27 && msg[0]!='\n'){ // Encerrado pelo cliente ou por si próprio (Thread Gráfica)
     if(!flagNovaMsg){ // só altero n se leio 
       n = recvfrom(sock, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&from, &fromlen);
-      //printf("sai");
     }
     if (n < 0 && n != -1){
       error("Receber");
-    }else if (n > 0){// captura de algo novo 
+    }else if (n > 0){                                   // captura de algo novo 
       if(!flagNovaMsg){
         char *tk;
         char *resto = buffer;
         tk = strtok_r(resto, "\n", &resto);
         #ifdef DEBUG
         if (buffer[0]!='\n'){
-          //printf("RECV %s", buffer);
+          printf("RECV %s", buffer);
         }
         #endif
         strcpy(msg, buffer);
         bzero(buffer, BUFFER_SIZE);
-        //if (msg[0]=='\n'){ // desligar servidor 
-        //  OUT = 27;
-        //}
       }
-      if(pthread_mutex_trylock(&mutexCOM)==0){ //peguei mutex
-        mensagem = analisarComando(msg,ISSERVER);
+      if(pthread_mutex_trylock(&mutexCOM)==0){ 
+        mensagem = analisarComando(msg,ISSERVER);       // Verifica o conteudo da mensagem
         if(mensagem.comando == C_S_CLOSE || mensagem.comando == C_S_OPEN){
-          //printf("VERIFICA TABELA!!!\n");
           repetido = verifica_tabela(mensagem);
         }else{
           repetido = 0;
         }
-        if(!repetido){ // verifica se não é repetida
-          obterInfo(&MENSAGEM,mensagem);  //Escreve pro mundo
-          NOVAMENSAGEM = 1;  //notifica o mundo
-          pthread_mutex_unlock(&mutexCOM); // libera o mutex
-          // -Trava enquanto a informação disponível não for utilizada 
-          while(MENSAGEM.comando != 0){ // fica travado esperando o simulador dizer que usou a info
-            //printf("AGUARDANDO SIMULADOR\n");
-          }
-          if(mensagem.comando == C_S_CLOSE || mensagem.comando == C_S_OPEN){
+        if(!repetido){                                  // Verifica se não é repetida
+          obterInfo(&MENSAGEM,mensagem);                // Escreve pro mundo
+          NOVAMENSAGEM = 1;                             // Notifica o mundo
+          pthread_mutex_unlock(&mutexCOM);              // Libera o mutex
+          // Trava enquanto a informação disponível não for utilizada 
+          while(MENSAGEM.comando != 0){}
+          if(mensagem.comando == C_S_CLOSE              // Caso seja um comando que precise de registor
+           || mensagem.comando == C_S_OPEN){
             atualiza_tabela(mensagem);
           }
-          //pthread_mutex_lock(&mutexSIM); // garante que não irá atrapalhar a simulação
-          if (mensagem.comando == C_S_GET) mensagem.valor = PLANTASIM.nivel; //respostas 
-          else if(mensagem.comando == C_S_SET) mensagem.valor = PLANTASIM.max; // respostas
-          //pthread_mutex_unlock(&mutexSIM);
-          //responde_cliente(mensagem, retorno);
-        }else{ //caso msg repetida revisitar 
+          if (mensagem.comando == C_S_GET){
+              mensagem.valor = PLANTASIM.nivel;        // Respostas 
+          }
+          else if(mensagem.comando == C_S_SET){
+           mensagem.valor = PLANTASIM.max;             // Respostas
+          }
+        }else{                                         // Caso Mensagem repetida revisitar 
        	  printf("Mem %d\n",mensagem.comando);
           #ifdef DEBUG
           CONTRUIM ++;
           #endif
           pthread_mutex_unlock(&mutexCOM);
-          //responde_cliente(mensagem, retorno);
         }
-        responde_cliente(mensagem, retorno);
-        //responder o cliente 
-        #ifdef TEMPESTADE
+        responde_cliente(mensagem, retorno);          // Responde ao cliente
+        #ifdef TEMPESTADE                             // Perda de pacotes interna       
         if (random()%9 != 0) {
         #endif
-          #ifdef TROVOADAS
+          #ifdef TROVOADAS                            // Delay interno
           if(random()%7 == 0){  
             waitms(DELAY);
             printf("\nDELAY\n");
@@ -317,8 +306,6 @@ void *threadComm(void *port){
           n = sendto(sock, retorno, strlen(retorno)+1, 0, (struct sockaddr *)&from, fromlen);
           if (n < 0){
             error("Envio");
-          }else{
-            //printf("\tSEND %s\n",retorno);
           }
         #ifdef TEMPESTADE
         }
@@ -338,7 +325,8 @@ void *threadComm(void *port){
     }
   }
   OUT = 27;
-  printf("\nEncerrando thread\n");
+  printf("\n\n==== Encerrando Thread de Comunicação ====");
+  return;
 }
 
 /**
@@ -349,39 +337,44 @@ void *threadComm(void *port){
 **/
 void* threadGraph(void* args)
 {
-    int exit =0, ctrl=0, comando=0;
-    int hasStarted = 0;
-    int atualizarPlot = 0;
-    static int tempo =0;
+    //---- Auxiliares 
+    int taux=0;
+    int attGraphTime = 0;
+    int rodar=0;
+
+    //---- Temporização 
+    static long int tempo =0;
+    struct timespec clkGraph;
+    clockid_t clk_id = CLOCK_MONOTONIC_RAW;
+
+    //---- Inicialização
+    clock_gettime(clk_id,&clkGraph);
     #ifdef GRAPH
     Tdataholder *data;
     data = datainit(640,480,150,120,(double)LVINIC,(double)0,(double)0);
     datadraw(data,0,LVINIC,50,outAngle(0));
     #endif
+    //---- Notificação de sucesso
     printf("Thread Gráfica Iniciada\n");
-    tempo =0;
-    int taux=0;
-    struct timespec clkGraph;
-    clockid_t clk_id = CLOCK_MONOTONIC_RAW;
-    int attGraphTime = 0;
-    int rodar=0;
-    clock_gettime(clk_id,&clkGraph);
+    
+      //---- LOOP Gráfico principal
     while(OUT != 27){
-      if(INICIARGRAPH==1 || rodar==-1){  // se não comecei -> o importante é ver se tenho que começar
-        if(pthread_mutex_trylock(&mutexGRAPH)==0){
+      if(INICIARGRAPH==1 || rodar==-1){  
+        if(pthread_mutex_trylock(&mutexGRAPH)==0){         // Caso não tenha iniciado ou não deva executar
           INICIARGRAPH = 0;
-        // botar o limpar grafico e inicio aqui
         if(rodar ==0)  clock_gettime(clk_id,&clkGraph);
-          rodar =1;
+          rodar =1;                                        // Habilita a execução
+          #ifdef GRAPH
           Restart(640,480,150,120,(double)LVINIC,(double)0,(double)0,data);
+          #endif
           pthread_mutex_unlock(&mutexGRAPH);
         } 
       }
-      if(rodar==1){
-            attGraphTime = deltaTempo(TGRAPH,clkGraph);
+      if(rodar==1){                                       // Se deve executar
+            attGraphTime = deltaTempo(TGRAPH,clkGraph);   // Atualiza status do contador
         if(attGraphTime){
-	          tempo+= TGRAPH;
-            taux = tempo%150000;
+	          tempo+= TGRAPH;                               // Aumenta o passo
+            taux = tempo%150000;                          // Verifica se chegou a fim do gráfico (150s)
             pthread_mutex_lock(&mutexGRAPH);
             #ifdef GRAPH
             datadraw(data,(double)taux/1000.0,(double)PLANTASIM.nivel,(double)PLANTASIM.angIN,(double)PLANTASIM.angOUT);
@@ -391,21 +384,19 @@ void* threadGraph(void* args)
             #endif
             pthread_mutex_unlock(&mutexGRAPH);
             
-            if ((taux)==0){
-              rodar = -1;
-              taux =0;
+            if ((taux)==0){                              // Se chegou ao fim do gráfico
+              rodar = -1;                                // Forçar a limpeza do gráfico
             }
-          //  printf("%ld\n",tempo);
-            tryExit();
-            clock_gettime(clk_id,&clkGraph);
+            tryExit();                                   // A cada 50 ms verifica se o User deseja sair 
+            clock_gettime(clk_id,&clkGraph);             // Atualiza o relógio
         }
       }
       else{
-        tryExit();
+        tryExit();                                       // Sempre Verifica se o usuário deseja sair
       }
      
     }
-    printf("FIM GRAFICO\n");
+    printf("\n\n======== Encerrando Thread Gráfica =======");
 }
 
 void tryExit(){
@@ -418,8 +409,8 @@ void tryExit(){
 /**
 *@brief Função que gera uma resposta para o servidor ...
 *
-*@param msg 
-*@param ans 
+*@param msg Estrutura com os dados da resposta 
+*@param ans Bufffer onde deve ser escrita a string que é a mensagem propriamente dita 
 **/
 void responde_cliente(TPMENSAGEM msg, char ans[]){
   #define TAM 10
@@ -492,45 +483,37 @@ void atualiza_tabela(TPMENSAGEM msg){
 /**
 *@brief Verifica se o comando recebido já não está cadastrado na tabela
 *
-*@param msg 
-*@return int 
+*@param msg Mensagem recebida 
+*@return int  retorn 1 se encontrou 
 **/
 int verifica_tabela(TPMENSAGEM msg){
   int i, flag_retorno = 0; //inicializa flag de retorno para o padrao sem "erro"
   //Verifica se alguma linha da tabela possui a mesma correspondencia
-  //int cont=0;
   if(TABREINIC == 0){ 
     for(i=LINHAATUAL;(i>LINHAATUAL-TOL && i>=0 && flag_retorno!=1);i--){
-      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){//
-        //printf("\tREP!!!");
-        flag_retorno = 1; //ativa flag de retorno para "erro"
+      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){
+        flag_retorno = 1;           //ativa flag de retorno para "erro"
       }
-      //cont++;
     }
   }
   else{
      // 31 .... 39 -> primeiro for 
-     // zero flag 
      for(i=LIN-LINHAATUAL-TOL;(i<LIN && flag_retorno!=1);i++){
-      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){//
+      if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){
         //printf("\tREP!!!");
-        flag_retorno = 1; //ativa flag de retorno para "erro"
+        flag_retorno = 1;           //ativa flag de retorno para "erro"
       }
-      //cont++;
     }
     for(i =0; (i<LINHAATUAL && flag_retorno!=1);i++){
-       if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){//
-        //printf("\tREP!!!");
-        flag_retorno = 1; //ativa flag de retorno para "erro"
+       if(msg.comando == TABELA[i][0] && msg.valor == TABELA[i][2] && LINHAATUAL!=0 && MENSAGEM.sequencia == TABELA[i][1]){
+        flag_retorno = 1;           //ativa flag de retorno para "erro"
       }
     }
   }
-  // 0 1 2 3 4 
-  //printf("\tcont: %d\n",cont);
   return flag_retorno;
 }
 
-
+#ifdef DEBUG
 /**
 *@brief Imprime a tabela, somente para debug.
 *
@@ -541,3 +524,4 @@ void imprime_tabela(){
     printf("(%d)\t%d, %d, %d\n",i,TABELA[i][0],TABELA[i][1],TABELA[i][2]);
   }
 }
+#endif

@@ -18,10 +18,11 @@
 #define REF 80                                    /* Valor da referencia*/
 #define ANGINIC 50                                /* Valor do ângulo de aberutr inicial*/
 #define LVINIC 40                                 /* Valor do nível da referência*/
-#define KP 15                                   /* Valor do ganho proporcional */
-#define KI 0.4                                  /* Valor do ganho integral */
-#define KD 0                                 /* Valor do ganho derivativo */
-
+#define KP 15                                     /* Valor do ganho proporcional */
+#define KI 0.4                                    /* Valor do ganho integral */
+#define KD 0                                      /* Valor do ganho derivativo */
+#define CPID 1                                    /* Controlador PID*/
+#define CBB  0                                    /* Controlador Bang-Bang*/
 /**
 *@brief Struc que contém os dados úteis para controle do processo
 *
