@@ -293,6 +293,7 @@ void *threadComm(void *port){
           //pthread_mutex_unlock(&mutexSIM);
           //responde_cliente(mensagem, retorno);
         }else{ //caso msg repetida revisitar 
+       	  printf("Mem %d\n",mensagem.comando);
           #ifdef DEBUG
           CONTRUIM ++;
           #endif

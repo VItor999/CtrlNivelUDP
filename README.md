@@ -17,7 +17,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 
 ### Completa
 
-1. Navegue para o diretorio *main* e execute  o arquivo *comp.sh*
+1. Navegue para o diretorio *main* e execute  o script *comp.sh*
 2. Inicie o servidor rodando o comando `./server <porta>`
 3. Inicie o cliente rodando o comando `./client <serverIP> <porta>`
 4. Encerre a janela gráfica do cliente para encerrar ambos os programas simultâneamente

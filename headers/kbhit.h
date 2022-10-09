@@ -2,8 +2,7 @@
 *@file kbhit.h
 *@author Lucas Esteves e Vitor Carvalho 
 *@brief Biblioteca auxiliar definida pra a definição do kbhit no linux
-* 
-*@version 0.1
+*@version FINAL
 *@date 2022-09-18
 *
 **/

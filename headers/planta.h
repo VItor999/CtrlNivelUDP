@@ -2,7 +2,7 @@
 *@file planta.h
 *@author Lucas Esteves e Vitor Carvalho 
 *@brief Arquivo auxiliar com as definições do processo a ser simulado
-*@version 0.1
+*@version FINAL
 *@date 2022-10-02
 *
 **/
@@ -57,82 +57,86 @@ void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc);
 **/
 void atualizarPlanta (TPMENSAGEM msg,TPPLANTA *PLANTA,int opc){
  //inputs iniciais
- 
-    static float influx = 0;     // inicia com a valvula Aberta em 50%
+    // Variáveis estáticas para eveitar ter que recriá-las, uma vez que essa função será 
+    // chamada com base no tempo de atualização do processo 
+    static float influx = 0;          
     static float outflux = 0; 
-    static float delta = 0;     // inteiro o -100
-    static float inAngle = INANGL;         //0-100
-    static float level = ((float)LVINIC)/100.0;
-    long int dT = TPLANTA;// passo do processo em ms;
-    static long int T= 0;
-    if(opc == PARAM || opc == PARAMCICLO){ // só atualiza
-        if (msg.comando == C_S_OPEN) //open
-        {
-            delta += msg.valor;
-        }
-        if (msg.comando == C_S_CLOSE) //close
-        {
-            delta -= msg.valor;
-        }
-        if (msg.comando == C_S_SET)
-        {
-           PLANTA->max = msg.valor; // valor de 0-100
-           //printf("QUEM È O MAX %d",PLANTA->max);
-        }
-        if(msg.comando == C_S_START){
-            influx = 0;     // inicia com a valvula Aberta em 50%
-            outflux = 0; 
-            delta = 0;     // inteiro o -100
-            inAngle = INANGL;         //0-100
-            level = ((float)LVINIC)/100.0;
-            dT = TPLANTA;// passo do processo em ms;
-            T= 0;
-            level = ((float)LVINIC)/100.0;
-            PLANTA->max = MAXINIC;
-            PLANTA->angIN  = (float)inAngle;
-            PLANTA->nivel = (int)level;     
-            //printf("ZERADITO");      
-        }
-    }
-    if(opc == CICLO || opc == PARAMCICLO){ // 1 simula  de fato
-        if (delta > 0)  //abrir 
-        {
-            if (delta < 0.01 * dT)
-            {
-                inAngle +=  delta;
-                delta = 0 ;
-            }
-            else {
-                inAngle+=  0.01 * dT;
-                delta -= 0.01 * dT;
-            }
-        }
-        else if (delta < 0) // fechar
-        {
-            if (delta > -0.01 * dT)
-            {
-                inAngle +=delta;
-                delta = 0 ;
-            }
-            else{
-                inAngle -= 0.01 * dT;
-                delta += 0.01 * dT;
-            } 
-        }
-        //printf("inAngle:%d\n",inAngle);
-        // definir T -> tempo depois do start
-        T= T+TPLANTA;
-        influx = 1 * sin(M_PI / 2 * inAngle / 100);
-        outflux = (((float)PLANTA->max) / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * outAngle(T) / 100);
-        level = level + 0.00002 * dT * (influx - outflux);
-
-        if (level <0){
+    static float delta = 0;                                     // Define a dinâmica da Válvula 
+    static float inAngle = INANGL;                              // Inicia com a valvula Aberta em 50% 0-100
+    static float level = ((float)LVINIC)/100.0;                 // Nivel incial (0-1) -> valor em porcentagem convertid
+    static long int T= 0;       
+    if(opc == PARAM || opc == PARAMCICLO){                      // Para somente atualizar um parametro
+        if (msg.comando == C_S_OPEN)                            // Abre a válvula
+        {       
+            delta += msg.valor;     
+        }       
+        if (msg.comando == C_S_CLOSE)                           // Fecha a válvula
+        {       
+            delta -= msg.valor;     
+        }       
+        if (msg.comando == C_S_SET)                             // Define o valor máximo do fluxo de saída
+        {       
+           PLANTA->max = msg.valor;                             // valor de 0-100
+        }           
+        if(msg.comando == C_S_START){                           // Reinicia o processo 
+            influx = 0;                                         // Inicia com fluxo 0
+            outflux = 0;        
+            delta = 0;          
+            T= 0;                           
+            inAngle = INANGL;                                   // Inicia com o angulo inicial ()
+            level = ((float)LVINIC)/100.0;      
+            level = ((float)LVINIC)/100.0;      
+            PLANTA->max = MAXINIC;      
+            PLANTA->angIN  = (float)inAngle;        
+            PLANTA->nivel = (int)level;             
+        }       
+    }                                                           
+    if(opc == CICLO || opc == PARAMCICLO){                      // Efetua um ciclo de simulação de fato
+        if (delta > 0)                                          // Caso deva Abrir 
+        {       
+            if (delta < 0.01 * TPLANTA)                         // Encerra a dinâmica da válvula
+            {       
+                inAngle +=  delta;      
+                delta = 0 ;     
+            }       
+            else {                                              // Gera a dinâmica da válvula
+                inAngle +=  0.01 * TPLANTA;     
+                delta -= 0.01 * TPLANTA;        
+            }       
+        }       
+        else if (delta < 0)                                     // Caso deva Fechar 
+        {       
+            if (delta > -0.01 * TPLANTA)                        // Encerra a dinâmica da válvula
+            {       
+                inAngle +=delta;        
+                delta = 0 ;     
+            }       
+            else{                                               // Efetua a dinâmica da válvula 
+                inAngle -= 0.01 * TPLANTA;      
+                delta += 0.01 * TPLANTA;        
+            }       
+        }       
+        T= T+TPLANTA;                                           // Soma o passo
+        influx = 1 * sin(M_PI / 2 * inAngle / 100);             // Calcula o fluxo de entrada
+        // Calcula o fluxo de saída         
+        outflux = (((float)PLANTA->max) / 100) * (level/1.25 + 0.2) * sin(M_PI/2 * outAngle(T)/100);
+        level = level + 0.00002 * TPLANTA * (influx - outflux); // Atualiza o nível 
+        // Aqui percebe-se a dinâmica do processo
+        // Como TPLANTA * 2e-5 = 2e-4 %nivel/ms*(entrada-saida)
+        // Como TPLANTA = 10 ms -> 1/0.01 => 100 chamadas por segundo
+        // Assim nivel = nivel anterior + 0.02*(entrada-saida)/s
+        // Aproximadamente 50s para efetuar 100% de um delta
+        // Portanto a constante de tempo, considerando um sistema de primeira ordem vale  1/31.5 =~ 0,032 s^-1
+        // Isso posto -> só fazer o controle 
+        // ganho estático é unitário
+        if (level <0){                                         // Saturação do nível negativo
             level = 0;
         }
-        else if(level >1){
+        else if(level >1){                                     // Saturação do nível positivo
             level=1;
         }
     }
+    // Atualização dos valores no struc de entrada 
     PLANTA->nivel = (int)(level*100);
     PLANTA->angIN = (float)inAngle;
     PLANTA->angOUT = (float)outAngle(T);

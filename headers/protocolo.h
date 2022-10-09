@@ -2,7 +2,7 @@
 *@file protocolo.h
 *@author Lucas Esteves e Vitor Carvalho 
 *@brief Biblioteca própria auxiliar para a definição do protocolo de comunição Utilizado.
-*@version 0.1
+*@version FINAL
 *@date 2022-09-18
 *
 **/
@@ -207,11 +207,18 @@ TPMENSAGEM analisarComando(char *mensagem, int is_serv)
 				printf("tk= %s\n",tk);
 			#endif	
 			//
-			if(strcmp(tk,S_COMTEST) == 0 && strcmp(strtok_r(resto, ENDMSG, &resto),OK)==0){ 
-				retorno.comando = C_C_COM;
+			if(strcmp(tk,S_COMTEST) == 0){
+				tk = strtok_r(resto, ENDMSG, &resto);
+				if(strcmp(tk,OK)==0) retorno.comando = C_C_COM;
 			}
-			else if (strcmp(tk,S_START)==0 && strcmp(strtok_r(resto, ENDMSG, &resto),OK)==0) {
-				retorno.comando = C_C_START;
+			else if (strcmp(tk,S_START)==0) {
+				
+				tk = strtok_r(resto, ENDMSG, &resto);
+				
+				if(strcmp(tk,OK)==0) {
+					
+					retorno.comando = C_C_START;
+				}
 			}
 			else if (strcmp(tk,S_OPEN)==0) {
 				tk = strtok_r(resto, ENDMSG, &resto);
