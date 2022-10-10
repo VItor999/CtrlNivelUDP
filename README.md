@@ -17,7 +17,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 
 ### Completa
 
-1. Navegue para o diretorio *main* e execute  o script *comp.sh*
+1. Navegue para o diretorio *src/main* e execute  o script *comp.sh*
 
 
 #### Problemas comuns 
@@ -25,7 +25,7 @@ A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte
 - Caso a biblioteca SDL 1.2 não esteja sendo encontrada, ela pode ser facilmente instalada em distribuições que utilizam o gerenciador de pacotes **apt** utilizando o seguinte comando: `sudo apt install libsdl1.2-dev`
 
 ### Sem gráfico
-1. Navegue para o diretorio *main*
+1. Navegue para o diretorio *src/main*
 2. Abra os arquivos *server.c* e *client.c*
 3. Comente, em cada um dos arquivos, o comando `#define GRAPH 1` (linha **11** em ambos os arquivos) utilizando `//`
 4. Compile o servidor utilizando os seguintes comandos: `gcc server.c -o server -pthread -lm -lrt`
