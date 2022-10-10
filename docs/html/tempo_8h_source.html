@@ -71,7 +71,7 @@ $(function() {
   <div class="headertitle"><div class="title">tempo.h</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span> </div>
+<a href="tempo_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span> </div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment">//===================== Bibliotecas utilizadas =====================//</span></div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;stdio.h&gt;</span></div>
@@ -83,14 +83,14 @@ $(function() {
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#ifndef temporizacao</span></div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="comment">//===================== Cabeçalhos de Funções =====================//</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keywordtype">void</span> waitms(<span class="keywordtype">float</span> twaitms);</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keywordtype">int</span> deltaTempo(<span class="keywordtype">int</span> timeOut,<span class="keyword">struct</span> timespec start);</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keywordtype">void</span> <a class="code hl_function" href="tempo_8h.html#a3ccbf79c53627c112e907a5747bbda35">waitms</a>(<span class="keywordtype">float</span> twaitms);</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keywordtype">int</span> <a class="code hl_function" href="tempo_8h.html#aa7edc9f7cefb2ca02dba2a74470ee570">deltaTempo</a>(<span class="keywordtype">int</span> timeOut,<span class="keyword">struct</span> timespec start);</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="comment">//#################################################################//</span></div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="comment">//########################   FUNÇÕES   ############################//</span></div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="comment">//#################################################################//</span></div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="keywordtype">void</span> waitms(<span class="keywordtype">float</span> twaitms)</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="tempo_8h.html#a3ccbf79c53627c112e907a5747bbda35">   33</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="tempo_8h.html#a3ccbf79c53627c112e907a5747bbda35">waitms</a>(<span class="keywordtype">float</span> twaitms)</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>{</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordtype">long</span> <span class="keywordtype">int</span> deltaT =  0;</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordtype">int</span> result;</div>
@@ -135,7 +135,7 @@ $(function() {
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>}</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span><span class="keywordtype">int</span> deltaTempo(<span class="keywordtype">int</span> timeOut,<span class="keyword">struct</span> timespec start){</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno"><a class="line" href="tempo_8h.html#aa7edc9f7cefb2ca02dba2a74470ee570">   85</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="tempo_8h.html#aa7edc9f7cefb2ca02dba2a74470ee570">deltaTempo</a>(<span class="keywordtype">int</span> timeOut,<span class="keyword">struct</span> timespec start){</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordtype">long</span> <span class="keywordtype">int</span> deltaT = 0;</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keyword">struct </span>timespec atual;</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordtype">int</span> retorno =0;</div>
@@ -157,6 +157,8 @@ $(function() {
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span><span class="preprocessor">#define temporizacao</span></div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="preprocessor">#endif</span></div>
 <div class="ttc" id="akbhit_8h_html"><div class="ttname"><a href="kbhit_8h.html">kbhit.h</a></div><div class="ttdoc">Biblioteca auxiliar definida pra a definição do kbhit no linux.</div></div>
+<div class="ttc" id="atempo_8h_html_a3ccbf79c53627c112e907a5747bbda35"><div class="ttname"><a href="tempo_8h.html#a3ccbf79c53627c112e907a5747bbda35">waitms</a></div><div class="ttdeci">void waitms(float twaitms)</div><div class="ttdoc">Função para esperar por milisegundos (qualquer valor entre 0-999)</div><div class="ttdef"><b>Definition:</b> tempo.h:33</div></div>
+<div class="ttc" id="atempo_8h_html_aa7edc9f7cefb2ca02dba2a74470ee570"><div class="ttname"><a href="tempo_8h.html#aa7edc9f7cefb2ca02dba2a74470ee570">deltaTempo</a></div><div class="ttdeci">int deltaTempo(int timeOut, struct timespec start)</div><div class="ttdoc">Função para informar se determinador delta T já ocorreu.</div><div class="ttdef"><b>Definition:</b> tempo.h:85</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

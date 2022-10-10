@@ -1,5 +1,5 @@
 /**
-*@file tempo.c
+*@file tempo.h
 *@author Lucas Esteves e Vitor Carvalho 
 *@brief Biblioteca com as funções de tempo
 *@version FINAL
