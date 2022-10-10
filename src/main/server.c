@@ -283,8 +283,7 @@ void *threadComm(void *port){
           else if(mensagem.comando == C_S_SET){
            mensagem.valor = PLANTASIM.max;             // Respostas
           }
-        }else{                                         // Caso Mensagem repetida revisitar 
-       	  printf("Mem %d\n",mensagem.comando);
+        }else{                                         // Caso Mensagem repetida revisitar
           #ifdef DEBUG
           CONTRUIM ++;
           #endif
