@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
     printf("\nCliente Inicializado Corretamente, parabens\n"); 
-    waitms(100);
+    waitms(200);
     char opc ='\0';
     while (opc=='\0'){
         printf("Selecione o controlador desejado:\n\t (0) Bang-Bang \t(1) PID\nCaso deseje encerrar o programa, digite q\n");
@@ -162,9 +162,8 @@ int main(int argc, char *argv[]){
             break;
         case '0':
             system("clear");
-            printf("\nControlador PID selecionado\n");
-            printf("\nControlador Bang-Bang selecionado");
-            
+            printf("\nControlador Bang-Bang selecionado\n");
+            printf("Executando o controle\n");    
             TIPOCONTROLE = CBB;                         // Define o controle como Bang-Bang
             starPID(&CTRLPID);
             break;              
@@ -181,7 +180,7 @@ int main(int argc, char *argv[]){
             break;
         }
     }
- 
+     waitms(200);
     
     //---- LOOP principal -> Roda a rotina de controle
     while (OUT != 27){                                  // Pressionando ESC encerro o cliente
