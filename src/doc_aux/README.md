@@ -1,4 +1,3 @@
-@mainpage
 # Controle de Nível via UDP
 
 ## Descrição
@@ -49,13 +48,19 @@ Neste treço são apresentadas algumas capturas de telas  a respeito dos resulta
 Na Figura 1, abaixo, é apresentado a resposta do sistema sem controlador. 
 
 ![1.Processo a ser controlado em malha aberta](../../images/SEMCONTROLE.png)
+<p align = "center">
+Fig.1 - Resposta do sistema sem controle.
+</p>
 
 Por sua vez, na Figura 2, é a apresentado o ensaio, sem pertubação, que foi efetuado para identificar (minimamente) características do processo para possibilitar seu controle.
 
 ![2.Ensaio efetuado](../../images/ensaio.png)
+<p align = "center">
+Fig.2 - Ensaio para identificação do sistema
+</p>
 
 Com base nessas duas Figuras (Figura 1 e Figura 2) é possível verificar a necessiade do controlador e o como o sistema se comporta na presença de um acionamento 
-## Resultados com controlador do Tipo Bang 
+## Resultados com controlador do Tipo Bang-Bang
 ### Sem perturbação de rede
 Na Figura 3, abaixo, é possível observar o controle do processo com um controlador Bang-Bang e sem perturbação de rede. A janela da esquerda representa a vista do servidor, onde a planta é executada e a da direita a vista do cliente, que efetua o controle. Para a janela do servidor:
 - Verde: abertura da válvula de entrada
@@ -66,7 +71,10 @@ Para a janela do cliente:
 - Azul: referência/nível desejado para o tanque
 - Laranja: nível do tanque  
 
-![3.Controle sem problemas de rede](../../images/bangbangSR.png)
+![3.Controle BangBang](../../images/bangbangSR.png)
+<p align = "center">
+Fig.3 - Resposta com controlador Bang-Bang.
+</p>
 
 ## Resultados com controlador do Tipo PID 
 ### Sem perturbação de rede
@@ -79,4 +87,7 @@ Para a janela do cliente:
 - Azul: referência/nível desejado para o tanque
 - Laranja: nível do tanque  
 
-![4.Controle sem problemas de rede](../../images/PISR.png)
+![4.Controle PID.](../../images/PISR.png)
+<p align = "center">
+Fig.4 - Resposta com controlador PID.
+</p>
