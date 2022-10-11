@@ -451,9 +451,11 @@ void* threadGraphClient(void* args)
 *
 **/
 void tryExit(){
-    //OUT = teclado(); 
     #ifdef GRAPH
     quitevent(&OUT);
+    #endif
+    #ifndef GRAPH
+    OUT = teclado(); 
     #endif
 }
 
