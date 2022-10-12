@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.3"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Controle de Nível via UDP: Main Page</title>
+<title>Controle de Nível via UDP: Controle de Nível via UDP</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -63,10 +63,106 @@ $(function() {
 </iframe>
 </div>
 
-<div class="header">
-  <div class="headertitle"><div class="title">Controle de Nível via UDP Documentation</div></div>
+<div><div class="header">
+  <div class="headertitle"><div class="title">Controle de Nível via UDP </div></div>
 </div><!--header-->
 <div class="contents">
+<div class="textblock"><h1><a class="anchor" id="autotoc_md0"></a>
+Controle de Nível via UDP</h1>
+<h2><a class="anchor" id="autotoc_md1"></a>
+Descrição</h2>
+<p >Esse repositório contem o trabalho final da disciplinha ENG10048 - Protocolos de Comunicação - UFRGS cursada em 2022/1. O trabalho foi proposto pelo professor Alceu Heinke Frigeri e desenvolvido pelos alunos Lucas Esteves e Vitor Carvalho. Para mais detalhes, verifique o *.pdf* que contém a descrição do trabalho.</p>
+<h2><a class="anchor" id="autotoc_md2"></a>
+Requisitos para compilação:</h2>
+<ul>
+<li>POSIX</li>
+<li>SLD 1.2 (opcional)</li>
+<li>GCC &gt;= 4.3</li>
+</ul>
+<p >A biblioteca SDL 1.2 é necessária somente para executar o programa com a parte gráfica.</p>
+<h2><a class="anchor" id="autotoc_md3"></a>
+Compilação</h2>
+<h3><a class="anchor" id="autotoc_md4"></a>
+Completa</h3>
+<ol type="1">
+<li>Navegue para o diretorio <em>src/main</em> e execute o script <em>comp.sh</em></li>
+</ol>
+<h4><a class="anchor" id="autotoc_md5"></a>
+Problemas comuns</h4>
+<ul>
+<li>Caso seja necessário, habilite as permissões para o <em>script</em> executando o comando: <code>chmod +x bash.sh</code></li>
+<li>Caso a biblioteca SDL 1.2 não esteja sendo encontrada, ela pode ser facilmente instalada em distribuições que utilizam o gerenciador de pacotes <b>apt</b> utilizando o seguinte comando: <code>sudo apt install libsdl1.2-dev</code></li>
+</ul>
+<h3><a class="anchor" id="autotoc_md6"></a>
+Sem gráfico</h3>
+<ol type="1">
+<li>Navegue para o diretorio <em>src/main</em></li>
+<li>Abra os arquivos <em>server.c</em> e <em>client.c</em></li>
+<li>Comente, em cada um dos arquivos, o comando <code>#define GRAPH 1</code> (linha <b>11</b> em ambos os arquivos) utilizando <code>//</code></li>
+<li>Compile o servidor utilizando os seguintes comandos: <code>gcc server.c -o server -pthread -lm -lrt</code></li>
+<li>Compile o cliente utilizando os seguintes comandos: <code>gcc client.c -o client -pthread -lm -lrt</code></li>
+</ol>
+<h2><a class="anchor" id="autotoc_md7"></a>
+Execução</h2>
+<h3><a class="anchor" id="autotoc_md8"></a>
+Completa</h3>
+<ol type="1">
+<li>Inicie o servidor rodando o comando <code>./server &lt;porta&gt;</code></li>
+<li>Inicie o cliente rodando o comando <code>./client &lt;serverIP&gt; &lt;porta&gt;</code></li>
+<li>Selecione o tipo de controlador desejado, na janela do cliente. Após pressione Enter</li>
+<li>Quando desejar, encerre a janela gráfica do cliente para encerrar ambos os programas simultâneamente.</li>
+</ol>
+<h3><a class="anchor" id="autotoc_md9"></a>
+Gráfica</h3>
+<ol type="1">
+<li>Execute os passos 1 - 3 da eexecução completa.</li>
+<li>Quando desejar, pressione Esc no cliente para encerrar ambos os programas simultâneamente</li>
+</ol>
+<h1><a class="anchor" id="autotoc_md10"></a>
+Resultados</h1>
+<p >Neste treço são apresentadas algumas capturas de telas a respeito dos resultados obtidos. </p>
+<h2><a class="anchor" id="autotoc_md11"></a>
+Sistema em Malha aberta</h2>
+<p >Na Figura 1, abaixo, é apresentado a resposta do sistema sem controlador.</p>
+<p  align="center"><img src="../../images/SEMCONTROLE.png" alt="1.Processo a ser controlado em malha aberta" class="inline"/> </p>
+<p >Fig.1 - Resposta do sistema sem controle. </p>
+<p >Por sua vez, na Figura 2, é a apresentado o ensaio, sem pertubação, que foi efetuado para identificar (minimamente) características do processo para possibilitar seu controle.</p>
+<p  align="center"><img src="../../images/ensaio.png" alt="2.Ensaio efetuado" class="inline"/> </p>
+<p >Fig.2 - Ensaio para identificação do sistema </p>
+<p >Com base nessas duas Figuras (Figura 1 e Figura 2) é possível verificar a necessiade do controlador e o como o sistema se comporta na presença de um acionamento </p>
+<h2><a class="anchor" id="autotoc_md12"></a>
+Resultados com controlador do Tipo Bang-Bang</h2>
+<h3><a class="anchor" id="autotoc_md13"></a>
+Sem perturbação de rede</h3>
+<p >Na Figura 3, abaixo, é possível observar o controle do processo com um controlador Bang-Bang e sem perturbação de rede. A janela da esquerda representa a vista do servidor, onde a planta é executada e a da direita a vista do cliente, que efetua o controle. Para a janela do servidor:</p><ul>
+<li>Verde: abertura da válvula de entrada</li>
+<li>Azul: perturbação/ variação da válvula de saída</li>
+<li>Laranja: nivel do tanque <br  />
+ Para a janela do cliente:</li>
+<li>Verde: abertura da válvula de entrada</li>
+<li>Azul: referência/nível desejado para o tanque</li>
+<li>Laranja: nível do tanque <br  />
+</li>
+</ul>
+<p  align="center"><img src="../../images/bangbangSR.png" alt="3.Controle BangBang" class="inline"/> </p>
+<p >Fig.3 - Resposta com controlador Bang-Bang. </p>
+<h2><a class="anchor" id="autotoc_md14"></a>
+Resultados com controlador do Tipo PID</h2>
+<h3><a class="anchor" id="autotoc_md15"></a>
+Sem perturbação de rede</h3>
+<p >Na Figura 4, abaixo, é possível observar o controle do processo com um controlador PID e sem perturbação de rede. A janela da esquerda representa a vista do servidor, onde a planta é executada e a da direita a vista do cliente, que efetua o controle. Para a janela do servidor:</p><ul>
+<li>Verde: abertura da válvula de entrada</li>
+<li>Azul: perturbação/ variação da válvula de saída</li>
+<li>Laranja: nivel do tanque <br  />
+ Para a janela do cliente:</li>
+<li>Verde: abertura da válvula de entrada</li>
+<li>Azul: referência/nível desejado para o tanque</li>
+<li>Laranja: nível do tanque <br  />
+</li>
+</ul>
+<p  align="center"><img src="../../images/PISR.png" alt="4.Controle PID." class="inline"/> </p>
+<p >Fig.4 - Resposta com controlador PID. </p>
+</div></div><!-- PageDoc -->
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
